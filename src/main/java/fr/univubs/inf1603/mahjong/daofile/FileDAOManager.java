@@ -5,8 +5,10 @@ import fr.univubs.inf1603.mahjong.dao.AbstractTile;
 import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
+import fr.univubs.inf1603.mahjong.dao.Zone;
 //import fr.univubs.inf1603.mahjong.engine.AbstractTile;
-import fr.univubs.inf1603.mahjong.engine.Zone;
+//import fr.univubs.inf1603.mahjong.engine.Zone;
+//import fr.univubs.inf1603.mahjong.engine.Game;
 import fr.univubs.inf1603.mahjong.sapi.Player;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,7 +16,7 @@ import java.nio.file.Paths;
 /**
  * La classe {@code FileDAOManager} est une implémentation du {@code DAOManager}
  * qui gère l'ensemble des DAO fichier. Elle utilise le patron de conception 
- * singleton. Son instance est obtenue via la méthode statique {@code getInstance}
+ * singleton. Son instance est obtenue via la méthode statique {@code getInstance()}
  * sans paramètre ou avec le chemin du répertoire racine {@code Path} comme paramètre.
  * 
  * @author aliyou
@@ -32,7 +34,7 @@ public class FileDAOManager implements DAOManager {
     private final Path rootDir;
     
 //    private FileGameDAO gameDao;
-//    private FileZoneDAO zoneDao;
+    private FileZoneDAO zoneDao;
     private FileTileDAO tileDao;
 //    private FilePlayerDAO playereDao;
     
@@ -46,7 +48,7 @@ public class FileDAOManager implements DAOManager {
     
     /**
      * Rétourne l'instance du gestionnaire des DAO.
-     * @return l'instance du {@code DAOManager}
+     * @return L'instance du {@code DAOManager}
      */
     public static DAOManager getInstance() {
         return getInstance(Paths.get(System.getProperty("user.home"), "MahJong"));
@@ -55,7 +57,7 @@ public class FileDAOManager implements DAOManager {
     /**
      * Rétourne l'instance du gestionnaire des DAO.
      * @param rootDir Chemin d'accès du repertoire racine.
-     * @return l'instance du {@code DAOManager}
+     * @return L'instance du {@code DAOManager}
      */
     public static FileDAOManager getInstance(Path rootDir) {
         if(daoManager == null) {
@@ -71,6 +73,10 @@ public class FileDAOManager implements DAOManager {
      */
     @Override
     public DAO getGameDao() throws DAOException {
+//        if(gameDao == null) {
+//            gameDao = new FileGameDAO(rootDir);
+//        }
+//        return gameDao;
         return null;
     }
 
@@ -81,7 +87,10 @@ public class FileDAOManager implements DAOManager {
      */
     @Override
     public DAO<Zone> getZoneDao() throws DAOException {
-        return null;
+        if(zoneDao == null) {
+            zoneDao = new FileZoneDAO(rootDir);
+        }
+        return zoneDao;
     }
     
     /**
@@ -92,7 +101,7 @@ public class FileDAOManager implements DAOManager {
     @Override
     public DAO<AbstractTile> getTileDao() throws DAOException {
         if(tileDao == null) {
-            tileDao = (rootDir != null) ? new FileTileDAO(rootDir) : new FileTileDAO();
+            tileDao = new FileTileDAO(rootDir);
         }
         return tileDao;
     }

@@ -4,6 +4,7 @@ import fr.univubs.inf1603.mahjong.daofile.FileHeaderRow.FileHeader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.UUID;
 
 /**
  *
@@ -32,6 +33,16 @@ public class FileUtilities {
             fhr = new FileHeaderRow(new FileHeader(0, 0));
         }
         return fhr;
+    }
+
+    /**
+     * 
+     * @param buffer
+     * @param str 
+     */
+    static void writeUUID(ByteBuffer buffer, UUID uuid) {
+        buffer.putLong(uuid.getMostSignificantBits());
+        buffer.putLong(uuid.getLeastSignificantBits());
     }
 
     /**

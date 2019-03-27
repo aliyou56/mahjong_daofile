@@ -1,6 +1,7 @@
 
 package fr.univubs.inf1603.mahjong.daofile;
 
+import fr.univubs.inf1603.mahjong.dao.DAOException;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
@@ -30,7 +31,7 @@ public class FileWriter implements PropertyChangeListener {
     /**
      * 
      */
-    private List<Row> dirty;
+    private List<AbstractRow> dirty;
 
     /**
      * 
@@ -58,11 +59,11 @@ public class FileWriter implements PropertyChangeListener {
      */
     Runnable writeToDisk = () -> {
         try {
-            for (Row row : dirty) {
+            for (AbstractRow row : dirty) {
                 row.write(fileChannel);
             }
             dirty.clear();
-        } catch (IOException e) {
+        } catch (IOException | DAOException e) {
             e.printStackTrace(System.out);
         }
     };
@@ -71,7 +72,7 @@ public class FileWriter implements PropertyChangeListener {
      * 
      * @param row 
      */
-    synchronized void addRecordToDirtyList(Row row) {
+    synchronized void addRowToDirtyList(AbstractRow row) {
         if ( ! dirty.contains(row)) {
             dirty.add(row);
             if (future != null) {
@@ -87,7 +88,7 @@ public class FileWriter implements PropertyChangeListener {
      */
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        Row row = (Row) evt.getSource();
-        addRecordToDirtyList(row);
+        AbstractRow row = (AbstractRow) evt.getSource();
+        addRowToDirtyList(row);
     }
 }
