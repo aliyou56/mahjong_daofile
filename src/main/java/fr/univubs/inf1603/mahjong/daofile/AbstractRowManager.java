@@ -1,10 +1,10 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
+import fr.univubs.inf1603.mahjong.dao.Persistable;
+import fr.univubs.inf1603.mahjong.dao.UniqueIdentifiable;
 import fr.univubs.inf1603.mahjong.daofile.FileHeaderRow.FileHeader;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
@@ -77,7 +77,8 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * Charge l'ensemble des tuples T en mémoire.
      *
      * @return Nombre de tuples chargés
-     * @throws IOException s'il y'a une erreur d'entrée sortie lors du chargement.
+     * @throws IOException s'il y'a une erreur d'entrée sortie lors du
+     * chargement.
      */
     private int loadAllRow() throws IOException {
         int _nbRecords = 0;
@@ -103,7 +104,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
 
     /**
      * Lis un tuple T à partir d'un tampon d'octet.
-     * 
+     *
      * @param buffer Tampon d'octet.
      * @param rowPointer Pointeur de tuple.
      * @return Le tuple T lu.
@@ -114,16 +115,17 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * Ajoute un tuple T à la liste des tuples.
      *
      * @param newRow Tuple T à rajouter.
-     * @throws IOException s'il y'a une erreur  lors de l'ajout du tuple.
+     * @throws IOException s'il y'a une erreur lors de l'ajout du tuple.
      */
     void addRow(T newRow) throws IOException {
         if (getRowNumber() == 0) {
             rows.add(newRow);
         } else {
-            UUID newRowID = getObjectUUID(newRow.getData());
+            UniqueIdentifiable ui = (UniqueIdentifiable) newRow.getData();
+            UUID newRowID = ui.getUUID();
             int pos = getRowPosition(newRowID);
-            Object rowObject = rows.get(pos).getData();
-            int compare = getObjectUUID(rowObject).compareTo(newRowID);
+            UniqueIdentifiable ui1 = (UniqueIdentifiable) rows.get(pos).getData();
+            int compare = ui1.getUUID().compareTo(newRowID);
             if (compare == -1) { // uuid plus grand
                 if (pos == getRowNumber() - 1) { // si c'est le dernier element
                     rows.add(newRow);
@@ -141,37 +143,45 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
 
     /**
      * Supprime un tuple T du fichier.
-     * 
+     *
      * @param dataID Identifiant de l'objet encapsuler dans le tuple T.
      * @return Le tuple T supprimé.
-     * @throws IOException  s'il y'a une erreur  lors de la suppression du tuple.
+     * @throws IOException s'il y'a une erreur lors de la suppression du tuple.
      */
     AbstractRow removeRow(UUID dataID) throws IOException {
         T row = getRow(dataID);
         if (row != null) {
-            System.out.println("todelete : " + row);
-//            dataPointer = row.getData().getPointer();
-////            indexRecord.setRecordPointer(-1);
-//            // isWrited
+            int pointer = (int) row.getRowPointer();
+            row.setRowPointer(-1, false);
             FileChannel fc = rowfile.getChannel();
-            int nextRowPointerPosition = (int) row.getRowPointer() + this.rowSize;
-//            System.out.println("nextRowPointerPosition : " + nextRowPointerPosition);
-//            System.out.println("before fc.size : " + fc.size());
-            int nbRemainBytes = (int) (fc.size() - nextRowPointerPosition);
-            nbRemainBytes = nbRemainBytes < 0 ? 0 : nbRemainBytes;
-            ByteBuffer remainingBytes = ByteBuffer.allocate(nbRemainBytes);
-            fc.position(nextRowPointerPosition);
-            fc.read(remainingBytes);
-            remainingBytes.flip();
-            fc.position(row.getRowPointer());
-            while (remainingBytes.hasRemaining()) {
-                fc.write(remainingBytes);
+            
+//            isWrited
+//            ByteBuffer buf = ByteBuffer.allocate(rowSize);
+//            fc.position(pointer);
+//            fc.read(buf);
+//            buf.flip();
+//            T rowInFile = readRow(buf, pointer);
+//            System.out.println("row.data : " + row.getData());
+//            System.out.println("rowInFile.data : " + rowInFile.getData());
+//            if(row.getData() == rowInFile.getData()) {
+
+            if(FileUtilities.deleteFromFile(fc, pointer, rowSize)) {
+                row.removePropertyChangeListener(rowWriter);
+                rows.remove(row);
+                fileHeader.decrementRowNumber();
+                int pos = getRowPosition(dataID);
+                System.out.println("pos : " + pos);
+                for (int i = pos; i < getRowNumber(); i++) {
+//                    System.out.println("i : " +i);
+                    T nextRow = (T) rows.get(i);
+                    long newPointer = nextRow.getRowPointer() - rowSize;
+                    newPointer = newPointer > 12 ? newPointer : 12;
+                    System.out.println(nextRow + " -> newPointer : " + newPointer);
+                    nextRow.setRowPointer(newPointer, false);
+                }
             }
-            fc.truncate(row.getRowPointer() + nbRemainBytes);
-////            System.out.println("after fc.size : " + fc.size());
-            row.removePropertyChangeListener(rowWriter);
-            rows.remove(row);
-            fileHeader.decrementRowNumber();
+            
+//            }
         }
         return row;
     }
@@ -185,34 +195,37 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
 //    }
     
     /**
-     * Insère un tuple T à la position pos et mets à jour le pointeur de tuple des
-     * tuples suivants la position pos.
-     * 
+     * Insère un tuple T à la position pos et mets à jour le pointeur de tuple
+     * des tuples suivants la position pos.
+     *
      * @param pos Position
      * @param newRow Tuple T à inserer.
      */
     private void insertAtPosition(int pos, T newRow) {
-        newRow.setRowPointer(rows.get(pos).getRowPointer());
+        newRow.setRowPointer(rows.get(pos).getRowPointer(), true);
         for (int i = pos; i < getRowNumber(); i++) {
             AbstractRow row = rows.get(i);
             long oldPointer = row.getRowPointer();
-            row.setRowPointer(oldPointer + IndexRow.INDEX_ROW_SIZE);
+            row.setRowPointer(oldPointer + IndexRow.INDEX_ROW_SIZE, true);
             rowWriter.addRowToDirtyList(row);
         }
         rows.add(pos, newRow);
     }
 
     /**
-     * Rétourne un tuple T s'il existe dans la liste des tuples sinon <code>null</code>.
-     * 
+     * Rétourne un tuple T s'il existe dans la liste des tuples sinon
+     * <code>null</code>.
+     *
      * @param dataID Identifiant de l'objet encapsuler dans le tuple.
-     * @return Tuple T s'il existe dans la liste des tuples sinon <code>null</code>.
+     * @return Tuple T s'il existe dans la liste des tuples sinon
+     * <code>null</code>.
      */
     T getRow(UUID dataID) {
         int pos = getRowPosition(dataID);
         if (getRowNumber() > 0) {
             T row = rows.get(pos);
-            if (getObjectUUID(row.getData()).compareTo(dataID) == 0) {
+            UniqueIdentifiable data = (UniqueIdentifiable) row.getData();
+            if (data.getUUID().compareTo(dataID) == 0) {
                 return row;
             }
         }
@@ -220,10 +233,10 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     }
 
     /**
-     * Rétorune la position d'un tuple T encapsulant l'objet d'identifiant <code>dataID</code>
-     * avec l'algorithme de recherche dichotomique.
-     * 
-     * @param dataID Identifiant de l'objet encapsuler dans le tuple T.
+     * Rétorune la position d'un tuple T encapsulant un objet d'identifiant
+     * <code>dataID</code> avec l'algorithme de recherche dichotomique.
+     *
+     * @param dataID Identifiant de l'objet encapsuler dans un tuple T.
      * @return Position d'un tuple T dans la liste des tuples.
      */
     protected int getRowPosition(UUID dataID) {
@@ -231,8 +244,8 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
         int b = getRowNumber() - 1;
         int mid = (a + b) / 2;
         while (a < b) {
-            AbstractRow row = rows.get(mid);
-            switch (getObjectUUID(row.getData()).compareTo(dataID)) {
+            AbstractRow<Persistable> row = rows.get(mid);
+            switch (row.getData().getUUID().compareTo(dataID)) {
                 case 0:
                     return mid;
                 case 1:
@@ -248,28 +261,9 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     }
 
     /**
-     * Rétourne l'identifiant <code>UUID</code> d'un objet avec la reflexivité.
-     * Elle recherche la méthode <code>getUUID()</code> dans l'objet en question.
-     * Si elle existe, l'identifiant est rétourné sinon une erreur.
-     * 
-     * @param object Objet
-     * @return Identifiant d'un objet
-     */
-    private static UUID getObjectUUID(Object object) {
-        try {
-            Class<?> cl = Class.forName(object.getClass().getName());
-            Method method = cl.getDeclaredMethod("getUUID");
-            return (UUID) method.invoke(object);
-        } catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            ex.printStackTrace(System.out);
-        }
-        return null;
-    }
-
-    /**
-     * Rétourne le nombre total de tuple dans le fichier.
-     * 
-     * @return Nombre total de tuple dans le fichier.
+     * Rétourne le nombre total de tuple dans un fichier.
+     *
+     * @return Nombre total de tuple dans un fichier.
      */
     int getRowNumber() {
         return rows.size();
@@ -277,7 +271,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
 
     /**
      * Rétourne le prochain identifiant de tuple.
-     * 
+     *
      * @return Prochain identifiant de tuple.
      */
     int getNextRowID() {
@@ -287,7 +281,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
 
     /**
      * Rétourne le prochain pointeur de tuple.
-     * 
+     *
      * @return Prochain pointeur de tuple.
      */
     protected long getNextRowPointer() {
@@ -296,7 +290,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
 
     /**
      * Rétourne la liste des tuples T.
-     * 
+     *
      * @return Liste des tuples T.
      */
     protected List<T> getRows() {

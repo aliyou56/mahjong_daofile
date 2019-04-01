@@ -1,11 +1,10 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.AbstractTile;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
-import fr.univubs.inf1603.mahjong.dao.Zone;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.GameTile;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.TileZone;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.Zone;
 import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
-import fr.univubs.inf1603.mahjong.daofile.myengine.TileZone;
-import fr.univubs.inf1603.mahjong.engine.TileZoneException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -21,7 +20,7 @@ import java.util.UUID;
 public class FileZoneDAO extends FileDAOMahJong<Zone> {
 
     static TileToZoneLinkManager tileToZonelinkManager;
-//    static ZoneToZoneLink zoneToZonelink;
+    static ZoneToZoneLinkManager zoneToZoneLinkManager;
 
     /**
      * Constructeur vide
@@ -41,8 +40,9 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
     FileZoneDAO(Path rootDir) throws DAOException {
         super(rootDir, "zone.data", "zone.index");
         try {
-            tileToZonelinkManager = TileToZoneLinkManager.getInstance(Paths.get(rootDir.toString(), "zoneToTile.link"));
-//            zoneToZonelink = ZoneToZoneLink.getInstance(Paths.get(rootDir.toString(), "zoneToZone.link"));
+            LinkManagerFactory factory = LinkManagerFactory.getInstance(rootDir);
+            tileToZonelinkManager = factory.getTileToZoneLinkManager();
+            zoneToZoneLinkManager = factory.getZoneToZoneLinkManager();
         } catch (IOException ioe) {
             throw new DAOException("Erreur IO : " + ioe.getMessage());
         }
@@ -85,7 +85,7 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
                     return dataRow.getData();
                 }
             }
-        } catch (IOException | TileZoneException ex) {
+        } catch (IOException  ex) {
             throw new DAOException("Erreur IO : \n" + ex.getMessage());
         }
         return null;
@@ -101,8 +101,9 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
     protected void deleteFromPersistance(Zone zone) throws DAOException {
         try {
             if (super.remove(zone.getUUID(), ZoneRow.ZONE_ROW_SIZE)) {
-                tileToZonelinkManager.removeTiles(zone.getUUID());
-                System.out.println("zone deleted to persistance");
+//                tileToZonelinkManager.removeTiles(zone.getUUID());
+                tileToZonelinkManager.removeTiles(zone.getUUID(), zone.getTilesCollection());
+                System.out.println("zone deleted from persistance");
             }
         } catch (IOException ex) {
             throw new DAOException("Erreur IO : \n" + ex.getMessage());
@@ -118,7 +119,7 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
     @Override
     protected List<Zone> laodAll() throws DAOException {
         ArrayList<Zone> zones;
-        if (getRowNumber() != map.size() || map.isEmpty()) {
+        if (getRowNumber() != map.size()) { // || map.isEmpty()
             for (IndexRow indexRow : indexManager.getRows()) {
                 Index index = indexRow.getData();
                 if (!map.containsKey(index.getUUID())) {
@@ -140,7 +141,6 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
          * Taille d'une tuile en octet.
          */
         private static final int ZONE_SIZE = 16 + (4 + 50) + 4 + 4;
-//        private static final int ZONE_SIZE = 16 + (4 + 50) + (4 + 1472) + (4 + 48);
         /**
          * Taille d'un tuple contenant une tuile.
          */
@@ -148,25 +148,24 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
 
         ZoneRow(int id, Zone data, long recordPointer) throws DAOException {
             super(id, data, ZONE_SIZE, recordPointer);
-//            data.addPropertyChangeListener(this);
         }
 
-        static ZoneRow ReadFromBuffer(ByteBuffer buffer, long recordPointer) throws DAOException, TileZoneException {
+        static ZoneRow ReadFromBuffer(ByteBuffer buffer, long recordPointer) throws DAOException {
             if (buffer.remaining() >= 20) {
                 int rowID = buffer.getInt();
                 UUID zoneID = new UUID(buffer.getLong(), buffer.getLong());
                 String name = FileUtilities.readString(buffer);
 
-//                int nbTileRead = buffer.getInt();
-//                int nbZoneRead = buffer.getInt();
+                int nbTiles = buffer.getInt();
+                int nbZones = buffer.getInt();
 //                if(nbTileRead != 0) {
-                ArrayList<AbstractTile> tiles = tileToZonelinkManager.loadTilesCollection(zoneID);
+                ArrayList<GameTile> tiles = tileToZonelinkManager.loadTilesCollection(zoneID);
 //                }
 //                if(nbZoneRead != 0) {
-//                    ArrayList<Zone> zones = zoneToZonelink.getZonesCollection(uuidRead);
+                ArrayList<Zone> zones = zoneToZoneLinkManager.loadZonesCollection(zoneID);
 //                }
 
-                Zone data = new TileZone(zoneID, name, tiles);
+                TileZone data = new TileZone(zoneID, name, tiles, zones);
                 return new ZoneRow(rowID, data, recordPointer);
             }
             return null;
@@ -174,17 +173,21 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
 
         @Override
         protected void writeData(ByteBuffer buffer) throws DAOException {
+            System.out.println("FileZoneDAO -> writeData");
             FileUtilities.writeUUID(buffer, getData().getUUID());
             if (getData() instanceof TileZone) {
-                TileZone tileZone = (TileZone) getData();
-                FileUtilities.writeString(buffer, tileZone.getName());
-                buffer.putInt(tileZone.getTilesCollection().size());
+            System.out.println("instance of TileZone");
+            System.out.println("tileZone.getTilesCollection().size() : " +getData().getTilesCollection().size());
+//                TileZone tileZone = (TileZone) getData();
+                FileUtilities.writeString(buffer, getData().getName());
+                buffer.putInt(getData().getTilesCollection().size());
 //                buffer.putInt(tileZone.getZonesCollection().size());
                 if (getData().getTilesCollection().size() > 0) {
-                        tileToZonelinkManager.addTiles(getData().getUUID(), tileZone.getTilesCollection());
+                    tileToZonelinkManager.addTiles(getData().getUUID(), getData().getTilesCollection());
                 }
-//                if(getData().getZonesCollection().size() > 0)
-//                    zoneToZonelink.addZones(getData().getUUID(), tileZone.getZonesCollection());
+//                if (getData().getZonesCollection().size() > 0) {
+//                    zoneToZoneLinkManager.addZones(getData().getUUID(), tileZone.getZonesCollection());
+//                }
             }
         }
 

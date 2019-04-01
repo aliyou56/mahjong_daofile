@@ -12,6 +12,47 @@ import java.util.UUID;
  */
 public class FileUtilities {
 
+    public static boolean deleteFromFile(FileChannel fc, int pointerPosition, int size) throws IOException {
+//        checkNotNull("fileChannel", fc);
+        if(pointerPosition < 0 || size < 0) {
+            throw new IllegalArgumentException("pointerPosition="+pointerPosition + " | size="+size);
+        }
+        System.out.println("pointerPosition : " + pointerPosition);
+        System.out.println("before fc.size : " + fc.size());
+        if (fc.size() > pointerPosition) {
+            int nextPointerPosition = pointerPosition + size;
+            System.out.println("nextPointerPosition : " + nextPointerPosition);
+            int nbRemainBytes = (int) (fc.size() - nextPointerPosition);
+            nbRemainBytes = nbRemainBytes < 0 ? 0 : nbRemainBytes;
+
+            ByteBuffer remainingBytes = ByteBuffer.allocate(nbRemainBytes);
+            fc.position(nextPointerPosition);
+            fc.read(remainingBytes);
+            remainingBytes.flip();
+            fc.position(pointerPosition);
+            while (remainingBytes.hasRemaining()) {
+                fc.write(remainingBytes);
+            }
+            fc.truncate(pointerPosition + nbRemainBytes);
+            System.out.println("after fc.size : " + fc.size());
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Vérifie si un objet est null ou pas. Lève une exception de type
+     * <code>IllegalArgumentException</code> si l'ojet est <code>null</code>.
+     *
+     * @param name Nom de l'objet à tester.
+     * @param obj Objet à tester.
+     */
+    private static void checkNotNull(String name, Object obj) {
+        if (obj == null) {
+            throw new IllegalArgumentException(name + " == null");
+        }
+    }
+
     /**
      *
      * @param fc
@@ -36,9 +77,9 @@ public class FileUtilities {
     }
 
     /**
-     * 
+     *
      * @param buffer
-     * @param str 
+     * @param str
      */
     static void writeUUID(ByteBuffer buffer, UUID uuid) {
         buffer.putLong(uuid.getMostSignificantBits());
@@ -46,9 +87,9 @@ public class FileUtilities {
     }
 
     /**
-     * 
+     *
      * @param buffer
-     * @param str 
+     * @param str
      */
     static void writeString(ByteBuffer buffer, String str) {
         buffer.putInt(str.length());
@@ -56,9 +97,9 @@ public class FileUtilities {
     }
 
     /**
-     * 
+     *
      * @param buffer
-     * @return 
+     * @return
      */
     static String readString(ByteBuffer buffer) {
         int lenght = buffer.getInt();

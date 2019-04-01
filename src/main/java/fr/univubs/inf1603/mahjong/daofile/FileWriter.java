@@ -22,7 +22,7 @@ public class FileWriter implements PropertyChangeListener {
     /**
      * 
      */
-    private static final int WAITING_TIME_BEFORE_WRITE = 2;
+    private static final int WAITING_TIME_BEFORE_WRITE = 1;
     
     /**
      * 

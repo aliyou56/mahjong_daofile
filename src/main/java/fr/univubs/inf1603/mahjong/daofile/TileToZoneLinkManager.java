@@ -1,13 +1,11 @@
-
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.AbstractTile;
-import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
-import static fr.univubs.inf1603.mahjong.daofile.AbstractLinkManager.daoManager;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.GameTile;
 import fr.univubs.inf1603.mahjong.daofile.LinkRow.Link;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -17,30 +15,30 @@ import java.util.UUID;
  */
 public class TileToZoneLinkManager extends AbstractLinkManager {
 
-    private static TileToZoneLinkManager zoneTileLink;
-
-    private static DAO<AbstractTile> tileDao;
-
-    private TileToZoneLinkManager(Path rowFilePath) throws IOException, DAOException {
-        super(rowFilePath);
-        tileDao = daoManager.getTileDao();
+    /**
+     *
+     * @param rootDir
+     * @throws IOException
+     */
+    TileToZoneLinkManager(Path rootDir) throws IOException {
+        super(Paths.get(rootDir.toString(), "tileToZone.link"));
         System.out.println("TileToZoneLinkManager : " + fileHeader);
     }
 
-    public static TileToZoneLinkManager getInstance(Path rowFilePath) throws IOException, DAOException {
-        if (zoneTileLink == null) {
-            zoneTileLink = new TileToZoneLinkManager(rowFilePath);
-        }
-        return zoneTileLink;
-    }
-
-    void addTiles(UUID zoneID, ArrayList<AbstractTile> tiles) throws DAOException {
+    /**
+     *
+     * @param zoneID
+     * @param tiles
+     * @throws DAOException
+     */
+    void addTiles(UUID zoneID, ArrayList<GameTile> tiles) throws DAOException {
+        System.out.println("TileToZoneLinkManager -> addTiles : zoneID : " + zoneID);
         try {
-            for (AbstractTile tile : tiles) {
+            for (GameTile tile : tiles) {
                 Link link = new Link(tile.getUUID(), zoneID);
                 super.addLink(link);
-                if (tileDao.find(tile.getUUID()) == null) {
-                    tileDao.save(tile);
+                if (daoManager.getTileDao().find(tile.getUUID()) == null) {
+                    daoManager.getTileDao().save(tile);
                 }
 
             }
@@ -49,19 +47,35 @@ public class TileToZoneLinkManager extends AbstractLinkManager {
         }
     }
 
-    void removeTiles(UUID zoneID) throws DAOException {
-        if (mapParentChild.containsKey(zoneID)) {
-            for (UUID tileID : mapParentChild.get(zoneID)) {
-                tileDao.delete(tileID); 
+    /**
+     *
+     * @param zoneID
+     * @throws DAOException
+     */
+    void removeTiles(UUID zoneID, ArrayList<GameTile> tiles) throws DAOException {
+        System.out.println("TileToZoneLinkManager -> removeTiles : zoneID : " + zoneID);
+        try {
+            for (GameTile tile : tiles) {
+                super.removeLink(tile.getUUID());
+                daoManager.getTileDao().delete(tile.getUUID());
             }
+        } catch (IOException ex) {
+            throw new DAOException("Erreur IO : \n" + ex.getMessage());
         }
     }
 
-    ArrayList<AbstractTile> loadTilesCollection(UUID zoneID) throws DAOException { 
+    /**
+     *
+     * @param zoneID
+     * @return
+     * @throws DAOException
+     */
+    ArrayList<GameTile> loadTilesCollection(UUID zoneID) throws DAOException {
+        System.out.println("TileToZoneLinkManager -> loadTiles : zoneID : " + zoneID);
         if (mapParentChild.containsKey(zoneID)) {
-            ArrayList<AbstractTile> tiles = new ArrayList<>();
+            ArrayList<GameTile> tiles = new ArrayList<>();
             for (UUID tileID : mapParentChild.get(zoneID)) {
-                AbstractTile tile = tileDao.find(tileID); 
+                GameTile tile = daoManager.getTileDao().find(tileID);
                 tiles.add(tile);
             }
             return tiles;

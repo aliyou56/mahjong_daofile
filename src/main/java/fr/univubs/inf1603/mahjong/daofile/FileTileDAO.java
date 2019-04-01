@@ -1,10 +1,8 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.AbstractTile;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.GameTile;
 import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
-import fr.univubs.inf1603.mahjong.daofile.myengine.Tile;
-//import fr.univubs.inf1603.mahjong.engine.AbstractTile;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -12,15 +10,13 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * La classe {@code FileTileDAO} gère la persistance d'une tuile.
  *
  * @author aliyou 1.0.0
  */
-public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
+public class FileTileDAO extends FileDAOMahJong<GameTile> {
 
     /**
      * Logging
@@ -46,7 +42,7 @@ public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
     FileTileDAO(Path rootDir) throws DAOException {
         super(rootDir, "tile.data", "tile.index");
         try {
-            tileToZoneLinkManager = TileToZoneLinkManager.getInstance(Paths.get(rootDir.toString(), "zoneToTile.link"));
+            tileToZoneLinkManager = LinkManagerFactory.getInstance(rootDirPath).getTileToZoneLinkManager();
         } catch (IOException ioe) {
             throw new DAOException("Erreur IO : " + ioe.getMessage());
         }
@@ -59,7 +55,7 @@ public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
      * @throws DAOException s'il y'a une erreur lors de la sauvegarde.
      */
     @Override
-    protected void writeToPersistance(AbstractTile tile) throws DAOException {
+    protected void writeToPersistance(GameTile tile) throws DAOException {
         try {
             long rowPointer = getNextRowPointer(TileRow.TILE_ROW_SIZE);
             TileRow row = new TileRow(getNexRowID(), tile, rowPointer);
@@ -77,7 +73,7 @@ public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
      * @throws DAOException s'il y'a une erreur lors du chargement
      */
     @Override
-    protected AbstractTile loadFromPersistance(UUID tileID) throws DAOException {
+    protected GameTile loadFromPersistance(UUID tileID) throws DAOException {
         try {
             long pointer = indexManager.getDataRowPointer(tileID);
             ByteBuffer buff = super.load(tileID, TileRow.TILE_ROW_SIZE, pointer);
@@ -102,15 +98,16 @@ public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
      * @throws DAOException s'il y'a une erreur lors de la suppression.
      */
     @Override
-    protected void deleteFromPersistance(AbstractTile tile) throws DAOException {
+    protected void deleteFromPersistance(GameTile tile) throws DAOException {
         try {
             // on vérifie si la tuile n'est pas reliée à une zone
             if (tileToZoneLinkManager.getRow(tile.getUUID()) == null) {
+                    System.out.println("tile id=" + tile.getUUID() + " no more link");
                 if (super.remove(tile.getUUID(), TileRow.TILE_ROW_SIZE)) {
                     System.out.println("tile deleted to persistance");
                 }
             } else {
-                System.out.println("Tile : " + tile.getUUID() + "linked to a zone");
+                System.out.println("Tile : " + tile.getUUID() + " is linked to a zone");
             }
         } catch (IOException ex) {
             throw new DAOException("Erreur IO : \n" + ex.getMessage());
@@ -124,8 +121,8 @@ public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
      * @throws DAOException s'il y'a une erreur lors du chargement.
      */
     @Override
-    protected List<AbstractTile> laodAll() throws DAOException {
-        ArrayList<AbstractTile> tiles;
+    protected List<GameTile> laodAll() throws DAOException {
+        ArrayList<GameTile> tiles;
         if (getRowNumber() != map.size()) { // || map.isEmpty()
             for (IndexRow indexRow : indexManager.getRows()) {
                 Index index = indexRow.getData();
@@ -142,7 +139,7 @@ public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
      * Cette classe répresente un conteneur pour une tuile. Elle permet de
      * rajouter des métadonnées à une tuile.
      */
-    static class TileRow extends AbstractRow<AbstractTile> {
+    static class TileRow extends AbstractRow<GameTile> {
 
         /**
          * Taille d'une tuile en octet.
@@ -161,7 +158,7 @@ public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
          * @param data Tuile encapsulé dans le tuple
          * @param recordPointer Pointeur du tuple
          */
-        TileRow(int rowID, AbstractTile data, long recordPointer) {
+        TileRow(int rowID, GameTile data, long recordPointer) {
             super(rowID, data, TILE_SIZE, recordPointer);
         }
 
@@ -181,7 +178,7 @@ public class FileTileDAO extends FileDAOMahJong<AbstractTile> {
                 UUID tileID = new UUID(buffer.getLong(), buffer.getLong());
                 String categoryRead = FileUtilities.readString(buffer);
                 String famillyRead = FileUtilities.readString(buffer);
-                Tile data = new Tile(tileID, categoryRead, famillyRead);
+                GameTile data = new GameTile(tileID, categoryRead, famillyRead);
                 return new TileRow(rowID, data, rowPointer);
             }
             return null;

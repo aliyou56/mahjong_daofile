@@ -13,7 +13,7 @@ import java.util.UUID;
  * vers le tuple contenant l'objet. Chaque index est encapsulé dans un tuple.
  * A l'instanciation de la classe l'ensemble des Index est chargé en mémoire dans
  * une liste. Cette liste est toujours ordonnée par ordre croissant suivant les
- * identifiants {@code UUID}. Lors d'un ajout à la liste, la position du nouvel 
+ * identifiants <code>UUID</code>. Lors d'un ajout à la liste, la position du nouvel 
  * index est déterminée et il est inséré à cette posiiton. Cela permet de 
  * maintenier la liste toujours trié. Ainsi un Index est retrtouvé à l'aide de 
  * l'algorithme de recherche dichotomique (O(log(n))).
@@ -78,36 +78,30 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      * @return
      * @throws IOException 
      */
-    void removeIndex(UUID dataID) throws IOException { 
+    void removeIndex(UUID dataID, int rowSize) throws IOException { 
         IndexRow indexRow = (IndexRow) super.removeRow(dataID);
         if (indexRow != null) {
             // update dataRowPointer
-            int offset = getDataRowPointerOffset();
-            System.out.println("offset = " + offset);
-            if (offset != -1) {
-                int pos = getRowPosition(dataID);
-                for (int i = (pos + 1); i < getRowNumber(); i++) {
-                    Index index = (Index) rows.get(pos).getData();
-                    index.setPointer(index.getPointer() - offset);
+            int pos = getRowPosition(dataID);
+            System.out.println("rowSize = " + rowSize);
+            System.out.println("pos = " + pos);
+            System.out.println("getRowNumber() = " + getRowNumber());
+            System.out.println("index deletd pointer = " + indexRow.getData().getPointer());
+            if (getRowNumber() != 0) {
+                System.out.println("pos pointer = " + rows.get(pos).getData().getPointer());
+                System.out.println("rows.get(pos).getData().getPointer() ? indexRow.getData().getPointer() : " 
+                        + rows.get(pos).getData().getPointer()+ " ? " +indexRow.getData().getPointer());
+                if (rows.get(pos).getData().getPointer() < indexRow.getData().getPointer()) {
+                    pos++;
                 }
+                System.out.println("pos = " + pos);
             }
+            for (int i = pos; i < getRowNumber(); i++) {
+                Index index = (Index) rows.get(i).getData();
+                index.setPointer(index.getPointer() - rowSize);
+            }
+            System.out.println("index deleted : " + indexRow);
         }
-    }
-    
-    /**
-     *
-     * @return
-     */
-    private int getDataRowPointerOffset() {
-        if (getRowNumber() > 1) {
-            Index idx0 = (Index) rows.get(0).getData();
-            Index idx1 = (Index) rows.get(1).getData();
-            int firstPointer  = (int) idx0.getPointer();
-            int secondPointer = (int) idx1.getPointer();
-            int offset = secondPointer - (firstPointer + FileHeaderRow.FILE_HEADER_ROW_SIZE);
-            return offset;
-        }
-        return -1;
     }
     
     /**
@@ -129,10 +123,4 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
         return -1;
     }
     
-//    List<IndexRow> getIndexRows() {
-//        List<IndexRow> indexRows = rows.stream()
-//                       .map(element->(IndexRow) element)
-//                       .collect(Collectors.toList());
-//        return indexRows;
-//    }
 }

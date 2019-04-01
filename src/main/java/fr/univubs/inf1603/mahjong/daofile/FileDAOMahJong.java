@@ -2,6 +2,7 @@ package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOMahJong;
+import fr.univubs.inf1603.mahjong.dao.Persistable;
 import fr.univubs.inf1603.mahjong.daofile.FileHeaderRow.FileHeader;
 import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
 import java.io.IOException;
@@ -39,7 +40,7 @@ import java.util.logging.Logger;
  * @version 1.0.0
  * @param <T> Objet à persister
  */
-public abstract class FileDAOMahJong<T> extends DAOMahJong<T> {
+public abstract class FileDAOMahJong<T extends Persistable> extends DAOMahJong<T> {
 
     /**
      * Logging
@@ -65,7 +66,7 @@ public abstract class FileDAOMahJong<T> extends DAOMahJong<T> {
     /**
      * Liste des tuples de données
      */
-    protected List<AbstractRow> dataRows;
+    protected List<AbstractRow<T>> dataRows;
     /**
      * Gère l'ensemble des index associés aux données
      */
@@ -170,41 +171,36 @@ public abstract class FileDAOMahJong<T> extends DAOMahJong<T> {
      * <code>false</code>.
      * @throws IOException s'il y'a une erreur lors de la suppression.
      */
-    protected final boolean remove(UUID dataID, int rowSize) throws IOException { 
+    protected final boolean remove(UUID dataID, int rowSize) throws IOException {
         IndexRow indexRow = (IndexRow) indexManager.getRow(dataID);
-        if(indexRow != null) {
+        if (indexRow != null) {
             Index index = indexRow.getData();
-            AbstractRow row = null;
-            for (AbstractRow r : dataRows) {
-                if (r.getRowPointer() == index.getPointer()) {
-                    row = r;
-                    break;
-                }
-            }
-            if (row != null) {
-                row.removePropertyChangeListener(fhr);
-                dataRows.remove(row);
-            }
+            int pointer = (int) index.getPointer();
             FileChannel fc = dataFile.getChannel();
-            int nextDataPointerPosition = (int) index.getPointer() + rowSize;
-            int nbRemainBytes = (int) (fc.size() - nextDataPointerPosition);
-            nbRemainBytes = nbRemainBytes < 0 ? 0 : nbRemainBytes;
-
-            ByteBuffer remainingBytes = ByteBuffer.allocate(nbRemainBytes);
-            fc.position(nextDataPointerPosition);
-            fc.read(remainingBytes);
-            remainingBytes.flip();
-            fc.position(index.getPointer());
-            while (remainingBytes.hasRemaining()) {
-                fc.write(remainingBytes);
+//                    System.out.println("FDM -> pointer : " +pointer + "rowSize : " + rowSize);
+            if (FileUtilities.deleteFromFile(fc, pointer, rowSize)) {
+                AbstractRow r = null;
+                for (AbstractRow dataRow : dataRows) {
+//                    System.out.println("dataRow.getRowPointer() ? pointer : " +dataRow.getRowPointer() + " ? " + pointer);
+                    if (dataRow.getRowPointer() == pointer) {
+                        dataRow.setRowPointer(-1, false);
+                        r = dataRow;
+                    }
+                    if (dataRow.getRowPointer() > pointer) {
+                        long newPointer = dataRow.getRowPointer() - rowSize;
+                        newPointer = newPointer > 12 ? newPointer : 12;
+                        System.out.println(dataRow + " -> newPointer : " + newPointer);
+                        dataRow.setRowPointer(newPointer, false);
+                    }
+                }
+                if(r != null) {
+                    r.removePropertyChangeListener(dataWriter);
+                    dataRows.remove(r);
+                }
+                fileHeader.decrementRowNumber();
+                indexManager.removeIndex(dataID, rowSize);
+                return true;
             }
-
-            fc.truncate(index.getPointer() + nbRemainBytes);
-            fileHeader.decrementRowNumber();
-            
-            indexManager.removeIndex(dataID);
-            
-            return true;
         }
         return false;
     }

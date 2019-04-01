@@ -1,24 +1,27 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.dao.DAOException;
+import fr.univubs.inf1603.mahjong.dao.MahJongObservable;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Objects;
 
 /**
- * La classe abstraite <code>AbstractRow</code> définit la notion de tuple. Elle
- * encapsule des objets qui vont étre écrit/lu sur/depuis un fichier.
+ * La classe abstraite <code>AbstractRow</code> définit la notion de tuple. 
+ * Un tuple encapsule un objet qui va etre écrit/lu sur/depuis un fichier.
+ * Il écoute également l'objet qu'il encapsule. Dès qu'il est notifié d'un
+ * changement il notifie à son tour le processus qui écrit dans le fichier. Ce
+ * dernier le mets dans sa liste d'attente pour écriture sur disque.
  *
  * @author aliyou
  * @version 1.0.0
  * @param <T> Objet à persister
  */
-public abstract class AbstractRow<T> implements PropertyChangeListener {
+public abstract class AbstractRow<T extends MahJongObservable> implements MahJongObservable, PropertyChangeListener {
 
     /**
      * Support d'écoute
@@ -31,57 +34,56 @@ public abstract class AbstractRow<T> implements PropertyChangeListener {
     protected final static int ROW_HEADER_SIZE = 4;
 
     /**
-     * Identifiant du tuple.
+     * Identifiant d'un tuple.
      */
     private final int rowID;
     /**
-     * Stock le pointeur du tuple.
+     * Stock le pointeur d'un tuple.
      */
     protected long rowPointer;
     /**
-     * Indique si l'état du tuple a changé.
+     * Indique si l'état d'un tuple a changé.
      */
     private boolean changed;
     /**
-     * L'objet encapsulé dans le tuple.
+     * L'objet encapsulé dans un tuple.
      */
     private T data;
     /**
-     * Taille de l'objet encapsulé dans le tuple.
+     * Taille de l'objet encapsulé dans un tuple.
      */
     private final int dataSize;
 
     /**
-     * Constructeur avec l'identifiant du tuple, l'objet encapsulé, la taille de l'objet
-     * encapsulé et le pointeur du tuple.
+     * Constructeur avec l'identifiant d'un tuple, l'objet encapsulé, la taille de l'objet
+     * encapsulé et le pointeur d'un tuple.
      *
-     * @param rowID Identifiant du tuple.
-     * @param data Objet encapsulé dans le tuple.
-     * @param dataSize Taille de l'objet encapsulé dans le tuple.
-     * @param rowPointer Pointeur du tuple.
+     * @param rowID Identifiant d'un tuple.
+     * @param data Objet encapsulé dans un tuple.
+     * @param dataSize Taille de l'objet encapsulé dans un tuple.
+     * @param rowPointer Pointeur d'un tuple.
      */
     AbstractRow(int rowID, T data, int dataSize, long rowPointer) {
+        if(rowID < 0) {
+            throw new IllegalArgumentException("rowID : "+rowID+" must be greater or equal to zero.");
+        }
         if (data == null) {
-            throw new NullPointerException("data == null");
+            throw new IllegalArgumentException("data == null");
+        }
+        if(dataSize < 1) {
+            throw new IllegalArgumentException("dataSize : "+dataSize+" must be greater than zero.");
+        }
+        if(rowPointer < -1) {
+            throw new IllegalArgumentException("rowPointer : "+rowPointer+" >= -1");
         }
         this.rowID = rowID;
         this.data = data;
         this.dataSize = dataSize;
         this.rowPointer = rowPointer;
         this.changed = false;
+        
+        this.data.addPropertyChangeListener(this);
         this.pcs = new PropertyChangeSupport(this);
-//        propertyChangeListener(this.data, "addPropertyChangeListener");
-    }
-
-    private void propertyChangeListener(T data, String methodName) {
-        try {
-            Class<?> cl = Class.forName(data.getClass().getName());
-            Method method = cl.getDeclaredMethod(methodName);
-            method.invoke(data, this);
-        } catch (NoSuchMethodException | IllegalArgumentException | InvocationTargetException
-                | IllegalAccessException | ClassNotFoundException ex) {
-            System.err.println(ex.getMessage());
-        }
     }
 
     /**
@@ -99,14 +101,16 @@ public abstract class AbstractRow<T> implements PropertyChangeListener {
             fileChannel.position(this.rowPointer);
             while (buffer.hasRemaining()) {
                 fileChannel.write(buffer);
-                System.out.println(" writed -> " + this);
             }
+            System.out.println(" writed on disk -> " + this);
+        } else {
+            System.out.println("wrong rowPointer : " + rowPointer);
         }
         this.changed = false;
     }
 
     /**
-     * Ecrit le contenu de l'objet encapsulé dans un tampon d'octet.
+     * Ecrit le contenu d'un objet encapsulé dans un tampon d'octet.
      * 
      * @param buffer Tampon d'octet.
      * @throws DAOException s'il y'a une erreur lors de l'écriture.
@@ -162,19 +166,21 @@ public abstract class AbstractRow<T> implements PropertyChangeListener {
     }
 
     /**
-     * Modifie le pointeur du tuple.
+     * Modifie le pointeur d'un tuple.
      *
      * @param rowPointer Nouveau pointeur d'un tuple.
      */
-    void setRowPointer(long rowPointer) {
-        if (this.rowPointer != rowPointer) {
+    void setRowPointer(long rowPointer, boolean write) {
+        if (this.rowPointer != rowPointer && rowPointer >= -1) {
             this.rowPointer = rowPointer;
-            setChanged(true);
+            if (write) {
+                setChanged(true);
+            }
         }
     }
 
     /**
-     * Rétourne l'objet encapsulé dans un tuple.
+     * Rétourne un objet encapsulé dans un tuple.
      *
      * @return Objet encapsulé dans un tuple.
      */
@@ -183,9 +189,9 @@ public abstract class AbstractRow<T> implements PropertyChangeListener {
     }
 
     /**
-     * Rétourne la taille de l'objet encapsulé.
+     * Rétourne la taille d'un objet encapsulé dans un tuple.
      *
-     * @return Taille de l'objet encapsulé
+     * @return Taille d'un objet encapsulé dans un tuple.
      */
     int getDataSize() {
         return this.dataSize;
@@ -200,21 +206,19 @@ public abstract class AbstractRow<T> implements PropertyChangeListener {
     public void propertyChange(PropertyChangeEvent evt) {
         setChanged(true);
     }
-
+    
     /**
-     * Ajoute un écouteur
-     *
-     * @param listener Ecouteur à rajouter.
+     * {@inheritDoc}
      */
+    @Override
     public void addPropertyChangeListener(PropertyChangeListener listener) {
         this.pcs.addPropertyChangeListener(listener);
     }
 
     /**
-     * Supprime un écouteur
-     *
-     * @param listener Ecouteur à supprimer
+     * {@inheritDoc}
      */
+    @Override
     public void removePropertyChangeListener(PropertyChangeListener listener) {
         this.pcs.removePropertyChangeListener(listener);
     }
@@ -229,4 +233,39 @@ public abstract class AbstractRow<T> implements PropertyChangeListener {
         return "Row {" + "id=" + rowID + ", rowPointer=" + rowPointer + ", changed=" + changed
                 + "\n\tdataSize=" + dataSize + "\n\tdata=" + data + '}';
     }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 97 * hash + this.rowID;
+        hash = 97 * hash + (int) (this.rowPointer ^ (this.rowPointer >>> 32));
+        hash = 97 * hash + Objects.hashCode(this.data);
+        hash = 97 * hash + this.dataSize;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final AbstractRow<?> other = (AbstractRow<?>) obj;
+        if (this.rowID != other.rowID) {
+            return false;
+        }
+        if (this.rowPointer != other.rowPointer) {
+            return false;
+        }
+        if (this.dataSize != other.dataSize) {
+            return false;
+        }
+        return Objects.equals(this.data, other.data);
+    }
+    
 }

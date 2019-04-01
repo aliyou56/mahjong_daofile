@@ -1,5 +1,6 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
+import fr.univubs.inf1603.mahjong.dao.Persistable;
 import fr.univubs.inf1603.mahjong.daofile.LinkRow.Link;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -33,7 +34,6 @@ public class LinkRow extends AbstractRow<Link> {
      */
     LinkRow(int rowID, Link data, long rowPointer) {
         super(rowID, data, LINK_SIZE, rowPointer);
-        data.addPropertyChangeListener(this);
     }
 
     /**
@@ -49,9 +49,9 @@ public class LinkRow extends AbstractRow<Link> {
     static LinkRow readFromBuffer(ByteBuffer buffer, long rowPointer) {
         if (buffer.remaining() >= LINK_ROW_SIZE - 1) {
             int rowID = buffer.getInt();
-            UUID linkID = new UUID(buffer.getLong(), buffer.getLong());
+            UUID childID = new UUID(buffer.getLong(), buffer.getLong());
             UUID parentID = new UUID(buffer.getLong(), buffer.getLong());
-            Link data = new Link(linkID, parentID);
+            Link data = new Link(childID, parentID);
             return new LinkRow(rowID, data, rowPointer);
         }
         return null;
@@ -72,7 +72,7 @@ public class LinkRow extends AbstractRow<Link> {
      * Cette classe répresente un lien entre un objet parent et un objet enfant.
      * 
      */
-    static class Link {
+    static class Link implements Persistable {
 
         /**
          * Support d'écoute
@@ -82,7 +82,7 @@ public class LinkRow extends AbstractRow<Link> {
         /**
          * Identifiant de l'objet enfant
          */
-        private final UUID id;
+        private final UUID childID;
         /**
          * Identifiant de l'objet parent
          */
@@ -92,11 +92,11 @@ public class LinkRow extends AbstractRow<Link> {
          * Constructeur avec l'identifiant de l'objet enfant et l'identifiant de 
          * l'objet parent.
          * 
-         * @param id Identifiant de l'objet enfant
+         * @param childID Identifiant de l'objet enfant
          * @param parentID Identifiant de l'objet parent
          */
-        Link(UUID id, UUID parentID) {
-            this.id = id;
+        Link(UUID childID, UUID parentID) {
+            this.childID = childID;
             this.parentID = parentID;
             this.pcs = new PropertyChangeSupport(this);
         }
@@ -107,8 +107,9 @@ public class LinkRow extends AbstractRow<Link> {
          * 
          * @return Identifiant d'un lien
          */
+        @Override
         public UUID getUUID() {
-            return id;
+            return childID;
         }
 
         /**
@@ -132,19 +133,17 @@ public class LinkRow extends AbstractRow<Link> {
         }
 
         /**
-         * Ajoute un écouteur
-         * 
-         * @param listener Ecouteur à rajouter.
+         * {@inheritDoc}
          */
+        @Override
         public void addPropertyChangeListener(PropertyChangeListener listener) {
             this.pcs.addPropertyChangeListener(listener);
         }
 
         /**
-         * Supprime un écouteur 
-         * 
-         * @param listener Ecouteur à supprimer
+         * {@inheritDoc}
          */
+        @Override
         public void removePropertyChangeListener(PropertyChangeListener listener) {
             this.pcs.removePropertyChangeListener(listener);
         }
@@ -156,7 +155,7 @@ public class LinkRow extends AbstractRow<Link> {
          */
         @Override
         public String toString() {
-            return "Link{" + "id=" + id + ", parentID=" + parentID + '}';
+            return "Link{" + "id=" + childID + ", parentID=" + parentID + '}';
         }
     }
 }

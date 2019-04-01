@@ -1,16 +1,17 @@
 
-package fr.univubs.inf1603.mahjong.daofile.myengine;
+package fr.univubs.inf1603.mahjong;
 
-import fr.univubs.inf1603.mahjong.dao.AbstractTile;
 import java.util.UUID;
 import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
-import fr.univubs.inf1603.mahjong.dao.Zone;
+import fr.univubs.inf1603.mahjong.dao.DAOManager;
+import fr.univubs.inf1603.mahjong.dao.Persistable;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.GameTile;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.TileZone;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.Zone;
 import fr.univubs.inf1603.mahjong.daofile.FileDAOManager;
-import fr.univubs.inf1603.mahjong.engine.TileZoneException;
 import java.util.ArrayList;
 import java.util.Arrays;
-//import fr.univubs.inf1603.mahjong.engine.AbstractTile;
 
 
 /**
@@ -19,23 +20,24 @@ import java.util.Arrays;
  */
 public class Test {
     
-    public static void main(String args[]) throws TileZoneException {
+    public static void main(String args[]) {
         try {
-            DAO<AbstractTile> dao = FileDAOManager.getInstance().getTileDao();
-            DAO<Zone> daoZone = FileDAOManager.getInstance().getZoneDao();
+            DAOManager daoManager = FileDAOManager.getInstance();
+            DAO<GameTile> dao = daoManager.getTileDao();
+//            DAO<Zone> daoZone = FileDAOManager.getInstance().getZoneDao();
 //            int nb = 5;
-//            Tile tiles[] = new Tile[nb];
+//            GameTile tiles[] = new GameTile[nb];
 //            int i=0;
 //            while(i < nb) {
 ////                UUID uuid = new UUID(0, (i+1));
 //                UUID uuid = UUID.randomUUID();
 //                String type = "Type" + (i+1);
 //                String family = "Family" + (i+1);
-//                tiles[i] = new Tile(uuid, type, family);
+//                tiles[i] = new GameTile(uuid, type, family);
 ////                dao.save(tiles[i]);
 //                i++;
 //            }
-//            Zone zone = new TileZone("my first zone", new ArrayList<>(Arrays.asList(tiles)));
+//            Zone zone = new TileZone("my first zone", new ArrayList<>(Arrays.asList(tiles)), null);
 //            daoZone.save(zone);
 //              System.out.println(zone);
 //                System.out.println(daoZone.find((UUID.fromString("c96f224d-175c-4a93-961b-8550bc43609"))));
@@ -57,18 +59,15 @@ public class Test {
 //                Tile tt = dao.find(new UUID(0, ));
 //                System.out.println(tt);
 //                tt.setCategory("Bamboo");
-//            System.out.println(dao.find(UUID.fromString("5f5f525a-1703-4522-a396-4607922fd2b4")));
-//            System.out.println(dao.find(UUID.fromString("0913f7a0-e0b7-4208-8ca6-72d7c52096bf")));
 
 //              for(AbstractTile t : dao.findAll()) {
 //                  Tile tt = (Tile) t;
 //                  System.out.println(tt);
 //              }
-//              248205a1-614b-4cc7-9e99-877b845fbe18
-                for(Zone zone : daoZone.findAll()) {
-                  Zone zo = (TileZone) zone;
-                  System.out.println(zo);
-              }
+//                for(Zone zone : daoZone.findAll()) {
+//                  Zone zo = (TileZone) zone;
+//                  System.out.println(zo);
+//              }
         } catch (DAOException ex) {
             ex.printStackTrace(System.out);
         }

@@ -1,15 +1,12 @@
 
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.AbstractTile;
 import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
-import fr.univubs.inf1603.mahjong.dao.Zone;
-//import fr.univubs.inf1603.mahjong.engine.AbstractTile;
-//import fr.univubs.inf1603.mahjong.engine.Zone;
-//import fr.univubs.inf1603.mahjong.engine.Game;
-import fr.univubs.inf1603.mahjong.sapi.Player;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.GameTile;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.Player;
+import fr.univubs.inf1603.mahjong.dao.fake_engine.Zone;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -99,7 +96,7 @@ public class FileDAOManager implements DAOManager {
      * @throws DAOException s'il y'a une erreur lors de l'instanciation de {@code TileDAO}
      */
     @Override
-    public DAO<AbstractTile> getTileDao() throws DAOException {
+    public DAO<GameTile> getTileDao() throws DAOException {
         if(tileDao == null) {
             tileDao = new FileTileDAO(rootDir);
         }
@@ -114,6 +111,5 @@ public class FileDAOManager implements DAOManager {
     @Override
     public DAO<Player> getPlayerDao() throws DAOException {
         return null;
-    }
-    
+    }   
 }
