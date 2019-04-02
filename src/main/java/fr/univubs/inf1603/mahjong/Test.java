@@ -24,7 +24,7 @@ public class Test {
         try {
             DAOManager daoManager = FileDAOManager.getInstance();
             DAO<GameTile> dao = daoManager.getTileDao();
-//            DAO<Zone> daoZone = FileDAOManager.getInstance().getZoneDao();
+            DAO<Zone> daoZone = FileDAOManager.getInstance().getZoneDao();
 //            int nb = 5;
 //            GameTile tiles[] = new GameTile[nb];
 //            int i=0;

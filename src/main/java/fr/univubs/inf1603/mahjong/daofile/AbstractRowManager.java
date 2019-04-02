@@ -31,11 +31,15 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     /**
      * Fichier.
      */
-    protected final RandomAccessFile rowfile;
+    private final RandomAccessFile rowFile;
+    /**
+     * Taille d'un tuple T
+     */
+    private final int rowSize;
     /**
      * Liste des tuples T.
      */
-    protected final List<T> rows;
+    private final List<T> rows;
 
     /**
      * L'en-tete du fichier.
@@ -49,10 +53,6 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * Processus qui écrit dans le fichier.
      */
     protected final FileWriter rowWriter;
-    /**
-     * Taille d'un tuple T
-     */
-    private final int rowSize;
 
     /**
      * Constructeur avec le chemin d'accès du fichier et la taille d'un tuple T.
@@ -64,9 +64,9 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      */
     protected AbstractRowManager(Path rowFilePath, int rowSize) throws IOException {
         this.rows = new ArrayList<>();
-        this.rowfile = new RandomAccessFile(rowFilePath.toFile(), "rw");
-        this.rowWriter = new FileWriter(rowfile.getChannel());
-        this.fhr = FileUtilities.loadFileHeader(rowfile.getChannel());
+        this.rowFile = new RandomAccessFile(rowFilePath.toFile(), "rw");
+        this.rowWriter = new FileWriter(rowFile.getChannel());
+        this.fhr = FileUtilities.loadFileHeader(rowFile.getChannel());
         this.fhr.addPropertyChangeListener(rowWriter);
         this.fileHeader = fhr.getData();
         this.rowSize = rowSize;
@@ -82,14 +82,14 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      */
     private int loadAllRow() throws IOException {
         int _nbRecords = 0;
-        FileChannel fc = rowfile.getChannel();
+        FileChannel fc = rowFile.getChannel();
         if (fc.size() != 0) {
             fc.position(FileHeaderRow.FILE_HEADER_ROW_SIZE);
             ByteBuffer buffer = ByteBuffer.allocate(rowSize);
             long rowPointer = fc.position();
             while (fc.read(buffer) > 0) {
                 buffer.flip();
-                T row = readRow(buffer, rowPointer);
+                T row = readRowFromBuffer(buffer, rowPointer);
                 if (row != null) {
                     this.rows.add(row);
                     _nbRecords++;
@@ -109,7 +109,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * @param rowPointer Pointeur de tuple.
      * @return Le tuple T lu.
      */
-    protected abstract T readRow(ByteBuffer buffer, long rowPointer);
+    protected abstract T readRowFromBuffer(ByteBuffer buffer, long rowPointer);
 
     /**
      * Ajoute un tuple T à la liste des tuples.
@@ -153,35 +153,31 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
         if (row != null) {
             int pointer = (int) row.getRowPointer();
             row.setRowPointer(-1, false);
-            FileChannel fc = rowfile.getChannel();
-            
+            FileChannel fc = rowFile.getChannel();
 //            isWrited
 //            ByteBuffer buf = ByteBuffer.allocate(rowSize);
 //            fc.position(pointer);
 //            fc.read(buf);
 //            buf.flip();
-//            T rowInFile = readRow(buf, pointer);
+//            T rowInFile = readRowFromBuffer(buf, pointer);
 //            System.out.println("row.data : " + row.getData());
 //            System.out.println("rowInFile.data : " + rowInFile.getData());
 //            if(row.getData() == rowInFile.getData()) {
 
             if(FileUtilities.deleteFromFile(fc, pointer, rowSize)) {
+                row.getData().removePropertyChangeListener(row);
                 row.removePropertyChangeListener(rowWriter);
                 rows.remove(row);
                 fileHeader.decrementRowNumber();
                 int pos = getRowPosition(dataID);
-                System.out.println("pos : " + pos);
                 for (int i = pos; i < getRowNumber(); i++) {
-//                    System.out.println("i : " +i);
-                    T nextRow = (T) rows.get(i);
+                    T nextRow = rows.get(i);
                     long newPointer = nextRow.getRowPointer() - rowSize;
-                    newPointer = newPointer > 12 ? newPointer : 12;
+                    newPointer = newPointer > FileHeaderRow.FILE_HEADER_ROW_SIZE ? newPointer : FileHeaderRow.FILE_HEADER_ROW_SIZE;
                     System.out.println(nextRow + " -> newPointer : " + newPointer);
                     nextRow.setRowPointer(newPointer, false);
                 }
             }
-            
-//            }
         }
         return row;
     }

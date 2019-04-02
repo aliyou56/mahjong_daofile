@@ -40,7 +40,7 @@ public abstract class AbstractRow<T extends MahJongObservable> implements MahJon
     /**
      * Stock le pointeur d'un tuple.
      */
-    protected long rowPointer;
+    private long rowPointer;
     /**
      * Indique si l'état d'un tuple a changé.
      */

@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -12,32 +14,58 @@ import java.util.UUID;
  */
 public class FileUtilities {
 
-    public static boolean deleteFromFile(FileChannel fc, int pointerPosition, int size) throws IOException {
+    /**
+     * Logging
+     */
+    private static final Logger LOGGER = Logger.getLogger(FileUtilities.class.getName());
+    
+    /**
+     * Supprime d'un fichier <code>size</code> octets à partir de la position
+     * <code>position</code>.
+     *
+     * exemple : Supposons qu'on a "This is a file" dans un fichier, en appelant
+     *          cette méthode avec position=5 et size=5, le fichier contiendra
+     *          apès l'execution "This file"
+     *
+     * @param fc Fichier
+     * @param position Position à partir de laquelle on supprime.
+     * @param size Nombre d'octets à supprimer.
+     * @return <code>true</code> si la suppression a été éffectuée sinon <code>false</code>.
+     * @throws IOException
+     */
+    public static boolean deleteFromFile(FileChannel fc, int position, int size) throws IOException {
 //        checkNotNull("fileChannel", fc);
-        if(pointerPosition < 0 || size < 0) {
-            throw new IllegalArgumentException("pointerPosition="+pointerPosition + " | size="+size);
+        if(position < 0) {
+            throw new IllegalArgumentException("FileUtilities.deleteFromFile : position must be greater than 0 : "+position);
         }
-        System.out.println("pointerPosition : " + pointerPosition);
-        System.out.println("before fc.size : " + fc.size());
-        if (fc.size() > pointerPosition) {
-            int nextPointerPosition = pointerPosition + size;
-            System.out.println("nextPointerPosition : " + nextPointerPosition);
-            int nbRemainBytes = (int) (fc.size() - nextPointerPosition);
-            nbRemainBytes = nbRemainBytes < 0 ? 0 : nbRemainBytes;
+        if(size < 0) {
+            throw new IllegalArgumentException("FileUtilities.deleteFromFile : size must be greater than 0: "+size);
+        }
+        long fileSize = fc.size();
+        boolean result = false;
+        LOGGER.log(Level.INFO, "position={0}, size={1}", new Object[]{position, size});
+//        System.out.println("FileUtilities.deleteFromFile : position="+position+", size="+size);
+        if (fc.size() > position) {
+            int nextPosition = position + size;
+            int nbRemaingBytes = (int) (fc.size() - nextPosition);
+            nbRemaingBytes = nbRemaingBytes < 0 ? 0 : nbRemaingBytes;
+            LOGGER.log(Level.INFO, "nextPosition={0}, nbRemaingBytes={1}", new Object[]{nextPosition, nbRemaingBytes});
+//            System.out.println("FileUtilities.deleteFromFile : nextPointerPosition=" +nextPosition);
 
-            ByteBuffer remainingBytes = ByteBuffer.allocate(nbRemainBytes);
-            fc.position(nextPointerPosition);
+            ByteBuffer remainingBytes = ByteBuffer.allocate(nbRemaingBytes);
+            fc.position(nextPosition);
             fc.read(remainingBytes);
             remainingBytes.flip();
-            fc.position(pointerPosition);
+            fc.position(position);
             while (remainingBytes.hasRemaining()) {
                 fc.write(remainingBytes);
             }
-            fc.truncate(pointerPosition + nbRemainBytes);
-            System.out.println("after fc.size : " + fc.size());
-            return true;
+            fc.truncate(position + nbRemaingBytes);
+            result = true;
         }
-        return false;
+        LOGGER.log(Level.INFO, "fileSize : {0} -> {1}", new Object[]{fileSize, fc.size()});
+//        System.out.println("FileUtilities.deleteFromFile : fileSize : "+fileSize+ " -> "+fc.size());
+        return result;
     }
 
     /**

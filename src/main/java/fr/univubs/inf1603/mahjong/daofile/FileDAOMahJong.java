@@ -177,18 +177,16 @@ public abstract class FileDAOMahJong<T extends Persistable> extends DAOMahJong<T
             Index index = indexRow.getData();
             int pointer = (int) index.getPointer();
             FileChannel fc = dataFile.getChannel();
-//                    System.out.println("FDM -> pointer : " +pointer + "rowSize : " + rowSize);
             if (FileUtilities.deleteFromFile(fc, pointer, rowSize)) {
                 AbstractRow r = null;
                 for (AbstractRow dataRow : dataRows) {
-//                    System.out.println("dataRow.getRowPointer() ? pointer : " +dataRow.getRowPointer() + " ? " + pointer);
                     if (dataRow.getRowPointer() == pointer) {
                         dataRow.setRowPointer(-1, false);
                         r = dataRow;
                     }
                     if (dataRow.getRowPointer() > pointer) {
                         long newPointer = dataRow.getRowPointer() - rowSize;
-                        newPointer = newPointer > 12 ? newPointer : 12;
+                        newPointer = newPointer > FileHeaderRow.FILE_HEADER_ROW_SIZE ? newPointer : FileHeaderRow.FILE_HEADER_ROW_SIZE;
                         System.out.println(dataRow + " -> newPointer : " + newPointer);
                         dataRow.setRowPointer(newPointer, false);
                     }

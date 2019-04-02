@@ -16,7 +16,7 @@ import org.junit.Test;
  *
  * @author aliyou, nesrine
  */
-public class FileZoneDAOTest extends FileDAOMahJongTest {
+public class FileZoneDAOTest extends FileDAOMahJongTest<Zone> {
     
     static DAO<Zone> zoneDao;
 
@@ -36,14 +36,14 @@ public class FileZoneDAOTest extends FileDAOMahJongTest {
     public void testSave() {
         try {
 //            UUID zoneID = new UUID(0, 5);
-            TileZone zone1 = new TileZone(new UUID(0, 1), "tileZoneTest1", createRandomTiles(4), null);
-//            TileZone zone2 = new TileZone(new UUID(0, 2), "tileZoneTest2", createRandomTiles(14), null);
-//            TileZone zone3 = new TileZone(new UUID(0, 3), "tileZoneTest3", createRandomTiles(14), null);
-//            TileZone zone4 = new TileZone(new UUID(0, 4), "tileZoneTest4", createRandomTiles(14), null);
+            TileZone zone1 = new TileZone(new UUID(0, 1), "tileZoneTest1", createRandomTiles(50), null);
+            TileZone zone2 = new TileZone(new UUID(0, 2), "tileZoneTest2", createRandomTiles(50), null);
+            TileZone zone3 = new TileZone(new UUID(0, 3), "tileZoneTest3", createRandomTiles(50), null);
+            TileZone zone4 = new TileZone(new UUID(0, 4), "tileZoneTest4", createRandomTiles(50), null);
             super.testSave(zoneDao, zone1);
-//            super.testSave(zoneDao, zone2);
-//            super.testSave(zoneDao, zone3);
-//            super.testSave(zoneDao, zone4);
+            super.testSave(zoneDao, zone2);
+            super.testSave(zoneDao, zone3);
+            super.testSave(zoneDao, zone4);
             Thread.sleep(4000);
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
@@ -66,11 +66,10 @@ public class FileZoneDAOTest extends FileDAOMahJongTest {
     @Test
     public void testDelete() {
         try {
-//            UUID zoneID = new UUID(0, 5);
+            super.testDelete(zoneDao, new UUID(0, 3));
             super.testDelete(zoneDao, new UUID(0, 1));
-//            super.testDelete(zoneDao, new UUID(0, 2));
-//            super.testDelete(zoneDao, new UUID(0, 3));
-//            super.testDelete(zoneDao, new UUID(0, 4));
+            super.testDelete(zoneDao, new UUID(0, 4));
+            super.testDelete(zoneDao, new UUID(0, 2));
             Thread.sleep(4000);
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);

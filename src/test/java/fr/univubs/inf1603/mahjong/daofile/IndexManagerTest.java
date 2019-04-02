@@ -1,8 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
@@ -54,7 +50,7 @@ public class IndexManagerTest {
     }
     
     /**
-     * Test of readRow method, of class IndexManager.
+     * Test of readRowFromBuffer method, of class IndexManager.
      */
     @Test
     public void testReadRow() {
@@ -73,13 +69,13 @@ public class IndexManagerTest {
             expResult.writeData(buffer);
             buffer.flip();
 
-            IndexRow result = instance.readRow(buffer, rowPointer);
+            IndexRow result = instance.readRowFromBuffer(buffer, rowPointer);
             assertEquals(expResult, result);
 
             buffer.clear();
             expResult.writeData(buffer);
             buffer.flip();
-            result = instance.readRow(buffer, rowPointer);
+            result = instance.readRowFromBuffer(buffer, rowPointer);
             assertEquals(null, result);
 
         } catch (IOException ex) {
@@ -123,7 +119,7 @@ public class IndexManagerTest {
             Index index = new Index(dataID, 589);
             instance.addIndex(index);
             Thread.sleep(4000);
-            instance.removeIndex(dataID, );
+            instance.removeIndex(dataID, 10);
             Thread.sleep(4000);
             IndexRow indexRow = instance.getRow(dataID);
             Index expResult = indexRow != null ? instance.getRow(dataID).getData() : null;

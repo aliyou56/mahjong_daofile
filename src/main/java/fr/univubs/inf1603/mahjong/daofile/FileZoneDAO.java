@@ -19,8 +19,8 @@ import java.util.UUID;
  */
 public class FileZoneDAO extends FileDAOMahJong<Zone> {
 
-    static TileToZoneLinkManager tileToZonelinkManager;
-    static ZoneToZoneLinkManager zoneToZoneLinkManager;
+    private static LinkManager<GameTile> tileToZoneLinkManager;
+    private static LinkManager<Zone> zoneToZoneLinkManager;
 
     /**
      * Constructeur vide
@@ -39,13 +39,9 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
      */
     FileZoneDAO(Path rootDir) throws DAOException {
         super(rootDir, "zone.data", "zone.index");
-        try {
-            LinkManagerFactory factory = LinkManagerFactory.getInstance(rootDir);
-            tileToZonelinkManager = factory.getTileToZoneLinkManager();
-            zoneToZoneLinkManager = factory.getZoneToZoneLinkManager();
-        } catch (IOException ioe) {
-            throw new DAOException("Erreur IO : " + ioe.getMessage());
-        }
+        LinkManagerFactory factory = LinkManagerFactory.getInstance(rootDir);
+        tileToZoneLinkManager = factory.getTileToZoneLinkManager();
+        zoneToZoneLinkManager = factory.getZoneToZoneLinkManager();
     }
 
     /**
@@ -101,8 +97,7 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
     protected void deleteFromPersistance(Zone zone) throws DAOException {
         try {
             if (super.remove(zone.getUUID(), ZoneRow.ZONE_ROW_SIZE)) {
-//                tileToZonelinkManager.removeTiles(zone.getUUID());
-                tileToZonelinkManager.removeTiles(zone.getUUID(), zone.getTilesCollection());
+                tileToZoneLinkManager.removeChildren(zone.getUUID(), zone.getTilesCollection());
                 System.out.println("zone deleted from persistance");
             }
         } catch (IOException ex) {
@@ -159,10 +154,10 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
                 int nbTiles = buffer.getInt();
                 int nbZones = buffer.getInt();
 //                if(nbTileRead != 0) {
-                ArrayList<GameTile> tiles = tileToZonelinkManager.loadTilesCollection(zoneID);
+                ArrayList<GameTile> tiles = tileToZoneLinkManager.loadChildren(zoneID);
 //                }
 //                if(nbZoneRead != 0) {
-                ArrayList<Zone> zones = zoneToZoneLinkManager.loadZonesCollection(zoneID);
+                ArrayList<Zone> zones = zoneToZoneLinkManager.loadChildren(zoneID);
 //                }
 
                 TileZone data = new TileZone(zoneID, name, tiles, zones);
@@ -173,20 +168,16 @@ public class FileZoneDAO extends FileDAOMahJong<Zone> {
 
         @Override
         protected void writeData(ByteBuffer buffer) throws DAOException {
-            System.out.println("FileZoneDAO -> writeData");
             FileUtilities.writeUUID(buffer, getData().getUUID());
             if (getData() instanceof TileZone) {
-            System.out.println("instance of TileZone");
-            System.out.println("tileZone.getTilesCollection().size() : " +getData().getTilesCollection().size());
 //                TileZone tileZone = (TileZone) getData();
                 FileUtilities.writeString(buffer, getData().getName());
                 buffer.putInt(getData().getTilesCollection().size());
 //                buffer.putInt(tileZone.getZonesCollection().size());
                 if (getData().getTilesCollection().size() > 0) {
-                    tileToZonelinkManager.addTiles(getData().getUUID(), getData().getTilesCollection());
+                    tileToZoneLinkManager.addChildren(getData().getUUID(), getData().getTilesCollection());
                 }
 //                if (getData().getZonesCollection().size() > 0) {
-//                    zoneToZoneLinkManager.addZones(getData().getUUID(), tileZone.getZonesCollection());
 //                }
             }
         }

@@ -10,19 +10,23 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * La classe {@code FileTileDAO} gère la persistance d'une tuile.
+ * La classe <code>FileTileDAO</code> gère la persistance d'une tuile.
  *
- * @author aliyou 1.0.0
+ * @author aliyou, nesrine
+ * @version 1.0.0
  */
 public class FileTileDAO extends FileDAOMahJong<GameTile> {
 
     /**
      * Logging
      */
-    //private final static Logger LOGGER = Logger.getLogger(FileDAOMahJong.class.getName());
-    TileToZoneLinkManager tileToZoneLinkManager;
+    private final static Logger LOGGER = Logger.getLogger(FileDAOMahJong.class.getName());
+    
+    private static LinkManager<GameTile> tileToZoneLinkManager;
 
     /**
      * Constructeur vide
@@ -41,11 +45,7 @@ public class FileTileDAO extends FileDAOMahJong<GameTile> {
      */
     FileTileDAO(Path rootDir) throws DAOException {
         super(rootDir, "tile.data", "tile.index");
-        try {
-            tileToZoneLinkManager = LinkManagerFactory.getInstance(rootDirPath).getTileToZoneLinkManager();
-        } catch (IOException ioe) {
-            throw new DAOException("Erreur IO : " + ioe.getMessage());
-        }
+        tileToZoneLinkManager = LinkManagerFactory.getInstance(rootDirPath).getTileToZoneLinkManager();
     }
 
     /**
@@ -101,13 +101,16 @@ public class FileTileDAO extends FileDAOMahJong<GameTile> {
     protected void deleteFromPersistance(GameTile tile) throws DAOException {
         try {
             // on vérifie si la tuile n'est pas reliée à une zone
-            if (tileToZoneLinkManager.getRow(tile.getUUID()) == null) {
-                    System.out.println("tile id=" + tile.getUUID() + " no more link");
+            if (tileToZoneLinkManager.getRow(tile.getUUID()) != null) {
+                LOGGER.log(Level.INFO, " ++++++ Tile id={0} canno't be deleted cause it is linked to a zone", tile.getUUID());
+            }
+                if(!tileToZoneLinkManager.isChildLinkedToAParent(tile.getUUID())) {
+                LOGGER.log(Level.INFO, "Tile id={0} no more link", tile.getUUID());
                 if (super.remove(tile.getUUID(), TileRow.TILE_ROW_SIZE)) {
-                    System.out.println("tile deleted to persistance");
+                    LOGGER.log(Level.INFO, "Tile id={0} deleted from persistance", tile.getUUID());
                 }
             } else {
-                System.out.println("Tile : " + tile.getUUID() + " is linked to a zone");
+                LOGGER.log(Level.INFO, "Tile id={0} canno't be deleted cause it is linked to a zone", tile.getUUID());
             }
         } catch (IOException ex) {
             throw new DAOException("Erreur IO : \n" + ex.getMessage());

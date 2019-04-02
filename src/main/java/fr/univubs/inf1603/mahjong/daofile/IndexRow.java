@@ -128,9 +128,11 @@ public class IndexRow extends AbstractRow<Index> {
          * @param parentID Nouvelle valeur du pointeur de donnée.
          */
         void setPointer(long pointer) {
-            long oldValue = this.pointer;
-            this.pointer = pointer;
-            this.pcs.firePropertyChange("pointer", oldValue, this.pointer);
+            if (this.pointer != pointer) {
+                long oldValue = this.pointer;
+                this.pointer = pointer;
+                this.pcs.firePropertyChange("pointer", oldValue, this.pointer);
+            }
         }
 
         /**

@@ -15,8 +15,9 @@ import static org.junit.Assert.*;
 /**
  *
  * @author aliyou
+ * @param <T>
  */
-public abstract class FileDAOMahJongTest {
+public abstract class FileDAOMahJongTest<T extends Persistable> {
 
     protected static Path rootDir;
     protected static DAOManager daoManager;
@@ -59,7 +60,7 @@ public abstract class FileDAOMahJongTest {
      * @param dao
      * @param object
      */
-    protected void testSave(DAO dao, Persistable object) {
+    protected void testSave(DAO<T> dao, T object) {
         try {
             System.out.println("save");
             dao.save(object);
@@ -76,7 +77,7 @@ public abstract class FileDAOMahJongTest {
      * @param dao
      * @param objectID
      */
-    protected void testDelete(DAO dao, UUID objectID) {
+    protected void testDelete(DAO<T> dao, UUID objectID) {
         try {
             System.out.println("delete");
             dao.delete(objectID);

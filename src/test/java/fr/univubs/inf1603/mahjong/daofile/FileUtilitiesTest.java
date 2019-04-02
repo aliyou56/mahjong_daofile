@@ -1,4 +1,3 @@
-
 package fr.univubs.inf1603.mahjong.daofile;
 
 import java.io.FileNotFoundException;
@@ -19,13 +18,17 @@ import static org.junit.Assert.*;
  * @author aliyou
  */
 public class FileUtilitiesTest {
-    
+
     static Path filePath;
-    
+
     public FileUtilitiesTest() {
-        filePath = Paths.get("/tmp/mahjong/dao", "file.test");
+        Path rootDir = Paths.get("/tmp/mahjong/dao");
+        if (!rootDir.toFile().exists()) {
+            rootDir.toFile().mkdirs();
+        }
+        filePath = Paths.get(rootDir.toString(), "file.test");
     }
-    
+
     /**
      * Destruction de l'environnement de test
      */
@@ -40,37 +43,47 @@ public class FileUtilitiesTest {
      */
     @Test
     public void testDeleteFromFile() {
+        System.out.println("deleteFromFile");
         try {
-            System.out.println("deleteFromFile");
-            RandomAccessFile file = new RandomAccessFile(filePath.toString(), "rw");
-            FileChannel fc = file.getChannel();
-            ByteBuffer buff = ByteBuffer.allocate(30);
-            buff.put("That is a file deleting test..".getBytes());
-            buff.flip();
-            while(buff.hasRemaining()) {
-                fc.write(buff);
-            }
+            System.out.println("At the begining");
+            String str = "That is a deleting test on a file.";
+            deleteFromFileTest(str, 0, 10, "deleting test on a file.");
             
-            String expResult = "That deleting test..";
-            int pointerPosition = 5;
-            int size = 10;
-            FileUtilities.deleteFromFile(fc, pointerPosition, size);
+            System.out.println("In the middle");
+            deleteFromFileTest(str, 10, 9, "That is a test on a file.");
             
-            fc.position(0);
-            buff.clear();
-            int lenght = fc.read(buff);
-            buff.flip();
-            System.out.println(buff);
-            byte b[] = new byte[lenght];
-            buff.get(b);
-            String result = new String(b);
-            System.out.println("result : " + result);
-            assertEquals(expResult, result);
+            System.out.println("At the end");
+            deleteFromFileTest(str, 23, 11, "That is a deleting test");
         } catch (FileNotFoundException ex) {
             Logger.getLogger(FileUtilitiesTest.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             Logger.getLogger(FileUtilitiesTest.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    private void deleteFromFileTest(String str, int position, int size, String expResult) throws FileNotFoundException, IOException {
+        String result;
+        try (RandomAccessFile file = new RandomAccessFile(filePath.toString(), "rw")) {
+            FileChannel fc = file.getChannel();
+            ByteBuffer buff = ByteBuffer.allocate(str.length());
+            buff.put(str.getBytes());
+            buff.flip();
+            while (buff.hasRemaining()) {
+                fc.write(buff);
+            }
+
+            FileUtilities.deleteFromFile(fc, position, size);
+
+            buff.clear();
+            fc.position(0);
+            int lenght = fc.read(buff);
+            buff.flip();
+            byte b[] = new byte[lenght];
+            buff.get(b);
+            result = new String(b);
+        }
+        filePath.toFile().delete();
+        assertEquals(expResult, result);
     }
 
     /**
@@ -86,7 +99,6 @@ public class FileUtilitiesTest {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-
     /**
      * Test of writeUUID method, of class FileUtilities.
      */
@@ -99,7 +111,6 @@ public class FileUtilitiesTest {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-
     /**
      * Test of writeString method, of class FileUtilities.
      */
@@ -112,7 +123,6 @@ public class FileUtilitiesTest {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-
     /**
      * Test of readString method, of class FileUtilities.
      */
@@ -126,5 +136,4 @@ public class FileUtilitiesTest {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-    
 }

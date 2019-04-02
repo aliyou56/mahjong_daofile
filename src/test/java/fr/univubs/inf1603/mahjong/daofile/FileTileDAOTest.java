@@ -12,14 +12,14 @@ import org.junit.Test;
  *
  * @author aliyou, nesrine
  */
-public class FileTileDAOTest extends FileDAOMahJongTest {
+public class FileTileDAOTest extends FileDAOMahJongTest<GameTile> {
 
-    static DAO<GameTile> gameDao;
+    static DAO<GameTile> tileDao;
 
     public FileTileDAOTest() {
         try {
             System.out.println("FileTileDAOTest");
-            gameDao = daoManager.getTileDao();
+            tileDao = daoManager.getTileDao();
         } catch (DAOException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -31,15 +31,16 @@ public class FileTileDAOTest extends FileDAOMahJongTest {
     @Test
     public void testSave() {
         try {
-            //        UUID tileID1 = new UUID(0, 1);
-//        UUID tileID2 = new UUID(0, 2);
-//        UUID tileID3 = new UUID(0, 3);
             GameTile tile1 = new GameTile(new UUID(0, 1), "Bamboo", "1");
-            super.testSave(gameDao, tile1);
+            super.testSave(tileDao, tile1);
             GameTile tile2 = new GameTile(new UUID(0, 2), "Dot", "5");
-            super.testSave(gameDao, tile2);
+            super.testSave(tileDao, tile2);
             GameTile tile3 = new GameTile(new UUID(0, 3), "Character", "9");
-            super.testSave(gameDao, tile3);
+            super.testSave(tileDao, tile3);
+            GameTile tile5 = new GameTile(new UUID(0, 5), "Dragon", "Red");
+            super.testSave(tileDao, tile5);
+            GameTile tile4 = new GameTile(new UUID(0, 4), "Wind", "East");
+            super.testSave(tileDao, tile4);
             Thread.sleep(4000);
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
@@ -52,9 +53,11 @@ public class FileTileDAOTest extends FileDAOMahJongTest {
     @Test
     public void testDelete() {
         try {
-            super.testDelete(gameDao, new UUID(0, 1));
-            super.testDelete(gameDao, new UUID(0, 3));
-            super.testDelete(gameDao, new UUID(0, 2));
+            super.testDelete(tileDao, new UUID(0, 1));
+            super.testDelete(tileDao, new UUID(0, 3));
+            super.testDelete(tileDao, new UUID(0, 2));
+            super.testDelete(tileDao, new UUID(0, 5));
+            super.testDelete(tileDao, new UUID(0, 4));
             Thread.sleep(4000);
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);

@@ -127,9 +127,11 @@ public class LinkRow extends AbstractRow<Link> {
          * @param parentID Nouvel identifiant de l'objet parent.
          */
         public void setParentID(UUID parentID) {
-            UUID oldValue = this.parentID;
-            this.parentID = parentID;
-            this.pcs.firePropertyChange("increment", oldValue, this.parentID);
+            if (this.parentID != parentID) {
+                UUID oldValue = this.parentID;
+                this.parentID = parentID;
+                this.pcs.firePropertyChange("increment", oldValue, this.parentID);
+            }
         }
 
         /**

@@ -1,13 +1,10 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package fr.univubs.inf1603.mahjong.daofile;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
+import org.junit.AfterClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -20,8 +17,12 @@ public abstract class AbstractRowManagerTest {
     public AbstractRowManagerTest() {
     }
 
+    @AfterClass
+    public static void tearDownClass() throws Exception {
+    }
+
     /**
-     * Test of readRow method, of class AbstractRowManager.
+     * Test of readRowFromBuffer method, of class AbstractRowManager.
      */
     @Test
     public void testReadRow() {
@@ -30,7 +31,7 @@ public abstract class AbstractRowManagerTest {
         long rowPointer = 0L;
         AbstractRowManager instance = null;
         AbstractRow expResult = null;
-        AbstractRow result = instance.readRow(buffer, rowPointer);
+        AbstractRow result = instance.readRowFromBuffer(buffer, rowPointer);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -145,6 +146,22 @@ public abstract class AbstractRowManagerTest {
         AbstractRowManager instance = null;
         List expResult = null;
         List result = instance.getRows();
+        assertEquals(expResult, result);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of readRowFromBuffer method, of class AbstractRowManager.
+     */
+    @Test
+    public void testReadRowFromBuffer() {
+        System.out.println("readRowFromBuffer");
+        ByteBuffer buffer = null;
+        long rowPointer = 0L;
+        AbstractRowManager instance = null;
+        AbstractRow expResult = null;
+        AbstractRow result = instance.readRowFromBuffer(buffer, rowPointer);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");

@@ -54,13 +54,22 @@ public class FileWriter implements PropertyChangeListener {
         this.dirty = new ArrayList<>();
     }
 
+    synchronized void stopWriter() {
+        
+    }
+    
+    synchronized void start() {
+        
+    }
     /**
      * 
      */
     Runnable writeToDisk = () -> {
         try {
             for (AbstractRow row : dirty) {
-                row.write(fileChannel);
+                if(row.getRowPointer() > -1) {
+                    row.write(fileChannel);
+                }
             }
             dirty.clear();
         } catch (IOException | DAOException e) {
@@ -87,7 +96,7 @@ public class FileWriter implements PropertyChangeListener {
      * @param evt 
      */
     @Override
-    public void propertyChange(PropertyChangeEvent evt) {
+    synchronized public void propertyChange(PropertyChangeEvent evt) {
         AbstractRow row = (AbstractRow) evt.getSource();
         addRowToDirtyList(row);
     }
