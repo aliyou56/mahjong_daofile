@@ -4,7 +4,7 @@ package fr.univubs.inf1603.mahjong.daofile;
 import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
-import fr.univubs.inf1603.mahjong.dao.Persistable;
+import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,7 +35,7 @@ public abstract class FileDAOMahJongTest<T extends Persistable> {
     @AfterClass
     public static void tearClass() {
         System.out.println("deleting test files ... ");
-        //clean(rootDir.getParent());
+//        clean(rootDir.getParent());
     }
 
     /**
@@ -62,7 +62,6 @@ public abstract class FileDAOMahJongTest<T extends Persistable> {
      */
     protected void testSave(DAO<T> dao, T object) {
         try {
-            System.out.println("save");
             dao.save(object);
 //            Thread.sleep(4000);
             assertEquals(object, dao.find(object.getUUID()));
@@ -79,7 +78,7 @@ public abstract class FileDAOMahJongTest<T extends Persistable> {
      */
     protected void testDelete(DAO<T> dao, UUID objectID) {
         try {
-            System.out.println("delete");
+//            System.out.println("delete");
             dao.delete(objectID);
 //            Thread.sleep(4000);
             assertEquals(null, dao.find(objectID));

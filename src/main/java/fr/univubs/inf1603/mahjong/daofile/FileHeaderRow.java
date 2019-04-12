@@ -1,8 +1,7 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.MahJongObservable;
+import fr.univubs.inf1603.mahjong.engine.persistence.MahjongObservable;
 import fr.univubs.inf1603.mahjong.daofile.FileHeaderRow.FileHeader;
-import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.nio.ByteBuffer;
 
@@ -42,7 +41,7 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
     @Override
     protected void writeData(ByteBuffer buffer) {
         buffer.putInt(getData().getRowNumber());
-        buffer.putInt(getData().getRowLastId());
+        buffer.putInt(getData().getNextRowID());
     }
 
     /**
@@ -71,7 +70,7 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
      * nombre de tuple total dans le fichier et le dernier identifiant de tuple
      * dans le fichier.
      */
-    static class FileHeader implements MahJongObservable {
+    static class FileHeader implements MahjongObservable {
 
         /**
          * Support d'écoute
@@ -85,18 +84,18 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
         /**
          * Identifiant du dernier tuple dans le fichier
          */
-        private int rowLastId;
+        private int nextRowID;
 
         /**
          * Constructeur avec le nombre total de tuple et l'identifiant du
          * dernier tuple dans le fichier.
          *
          * @param rowNumber Nombre total de tuple dans le fichier.
-         * @param rowLastId Identifiant du dernier tuple dans le fichier
+         * @param nextRowID Identifiant du dernier tuple dans le fichier
          */
-        FileHeader(int rowNumber, int rowLastId) {
+        FileHeader(int rowNumber, int nextRowID) {
             this.rowNumber = rowNumber;
-            this.rowLastId = rowLastId;
+            this.nextRowID = nextRowID < 1 ? 1 : nextRowID;
             this.pcs = new PropertyChangeSupport(this);
         }
 
@@ -114,8 +113,10 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
          *
          * @return Identifiant du dernier tuple dans le fichier.
          */
-        synchronized int getRowLastId() {
-            return rowLastId;
+        synchronized int getNextRowID() {
+            this.nextRowID += 1;
+            this.pcs.firePropertyChange("rowLastId", this.nextRowID - 1, this.nextRowID);
+            return nextRowID - 1;
         }
 
         /**
@@ -130,8 +131,8 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
          */
         synchronized void decrementRowNumber() {
             increment(-1);
-            if(rowNumber == 0) {
-                rowLastId = 0;
+            if (rowNumber == 0) {
+                nextRowID = 0;
             }
         }
 
@@ -141,27 +142,11 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
         }
 
         /**
-         * Incrémente l'identifiant du dernier tuple dans le fichier.
-         */
-        synchronized void updateRowLastId() {
-            this.rowLastId += 1;
-            this.pcs.firePropertyChange("rowLastId", this.rowLastId - 1, this.rowLastId);
-        }
-
-        /**
          * {@inheritDoc}
          */
         @Override
-        public void addPropertyChangeListener(PropertyChangeListener listener) {
-            this.pcs.addPropertyChangeListener(listener);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void removePropertyChangeListener(PropertyChangeListener listener) {
-            this.pcs.removePropertyChangeListener(listener);
+        public PropertyChangeSupport getPropertyChangeSupport() {
+            return this.pcs;
         }
 
         /**
@@ -171,7 +156,7 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
          */
         @Override
         public String toString() {
-            return "FileHeader {" + "rowNumber=" + rowNumber + ", rowLastId=" + rowLastId + '}';
+            return "FileHeader {" + "rowNumber=" + rowNumber + ", nextRowID=" + nextRowID + '}';
         }
     }
 }

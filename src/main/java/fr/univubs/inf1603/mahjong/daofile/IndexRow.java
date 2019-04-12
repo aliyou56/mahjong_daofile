@@ -1,17 +1,17 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.Persistable;
+import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
-import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Cette classe répresente un conteneur qui encapsule un index. 
+ * Cette classe répresente un tuple qui encapsule un index. 
  * 
- * @author aliyou
+ * @author aliyou, nesrine
  * @version 1.0.0
  */
 public class IndexRow extends AbstractRow<Index> {
@@ -41,15 +41,16 @@ public class IndexRow extends AbstractRow<Index> {
      * Ecrit un index dans un tampon d'octet.
      *
      * @param buffer Tampon d'octet
+     * @throws java.io.IOException
      */
     @Override
-    protected void writeData(ByteBuffer buffer) {
-        FileUtilities.writeUUID(buffer, getData().getUUID());
+    protected void writeData(ByteBuffer buffer) throws IOException {
+        FileWriter.writeUUID(buffer, getData().getUUID());
         buffer.putLong(getData().getPointer());
     }
 
     /**
-     * Lis un tuple contenant un index à partir d'un tampon d'octets. Rétourne
+     * Lis un tuple d'index à partir d'un tampon d'octets. Rétourne
      * le tuple lu si les données dans le tampon sont cohérentes sinon
      * <code>null</code>.
      *
@@ -139,16 +140,8 @@ public class IndexRow extends AbstractRow<Index> {
          * {@inheritDoc}
          */
         @Override
-        public void addPropertyChangeListener(PropertyChangeListener listener) {
-            this.pcs.addPropertyChangeListener(listener);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void removePropertyChangeListener(PropertyChangeListener listener) {
-            this.pcs.removePropertyChangeListener(listener);
+        public PropertyChangeSupport getPropertyChangeSupport() {
+            return this.pcs;
         }
 
         /**

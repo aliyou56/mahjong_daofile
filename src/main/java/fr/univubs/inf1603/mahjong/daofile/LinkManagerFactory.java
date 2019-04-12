@@ -1,10 +1,8 @@
-
 package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
-import fr.univubs.inf1603.mahjong.dao.fake_engine.GameTile;
-import fr.univubs.inf1603.mahjong.dao.fake_engine.Zone;
+import fr.univubs.inf1603.mahjong.engine.game.GameTile;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,55 +13,55 @@ import java.nio.file.Paths;
  * @version 1.0.0
  */
 public class LinkManagerFactory {
-    
+
     /**
-     * 
+     * Factory
      */
     private static LinkManagerFactory factory;
     /**
-     * 
+     * Gestionnaire des DAOs.
      */
     private static DAOManager daoManager;
-    
+
     /**
-     * 
+     * Gestionnaire de lien entre une zone et ses tuiles.
      */
     private LinkManager<GameTile> tileToZoneLinkManager;
+
     /**
-     * 
-     */
-    private LinkManager<Zone> zoneToZoneLinkManager;
-    
-    /**
-     * 
+     * Chemin d'accès du repertoire racine.
      */
     private final Path rootDir;
-    
+
     /**
-     * 
-     * @param rootDir 
+     * Constructeur privé avec le chemin d'accès du repertoire racine.
+     *
+     * @param rootDir Chemin d'accès du repertoire racine.
      */
     private LinkManagerFactory(Path rootDir) {
         this.rootDir = rootDir;
         daoManager = FileDAOManager.getInstance();
     }
-    
+
     /**
-     * 
-     * @param rootDir
-     * @return 
+     * Rétourne l'instance de la factory.
+     *
+     * @param rootDir Chemin d'accès du repertoire racine.
+     * @return L'instance de la factory.
      */
     public static LinkManagerFactory getInstance(Path rootDir) {
-        if(factory == null) {
+        if (factory == null) {
             factory = new LinkManagerFactory(rootDir);
         }
         return factory;
     }
-    
+
     /**
-     * 
-     * @return
-     * @throws DAOException 
+     * Rétourne le gestionnaire de lien Tuile - Zone.
+     *
+     * @return Gestionnaire de lien Tuile - Zone.
+     * @throws DAOException s'il y'a une erreur lors de l'instanciation du
+     * gestionnaire de lien.
      */
     public LinkManager<GameTile> getTileToZoneLinkManager() throws DAOException {
         try {
@@ -76,21 +74,5 @@ public class LinkManagerFactory {
         }
         return tileToZoneLinkManager;
     }
-    
-    /**
-     * 
-     * @return
-     * @throws DAOException 
-     */
-    public LinkManager<Zone> getZoneToZoneLinkManager() throws DAOException {
-        try {
-            if (zoneToZoneLinkManager == null) {
-                zoneToZoneLinkManager = new LinkManager(Paths.get(rootDir.toString(), "zoneToZone.link"));
-                zoneToZoneLinkManager.setDAO(daoManager.getZoneDao());
-            }
-        } catch (IOException ioe) {
-            throw new DAOException("Erreur IO : " + ioe.getMessage());
-        }
-        return zoneToZoneLinkManager;
-    }
+
 }

@@ -1,9 +1,9 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.Persistable;
+import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import fr.univubs.inf1603.mahjong.daofile.LinkRow.Link;
-import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
@@ -61,11 +61,12 @@ public class LinkRow extends AbstractRow<Link> {
      * Ecrit un lien dans un tampon d'octet.
      *
      * @param buffer Tampon d'octet
+     * @throws java.io.IOException
      */
     @Override
-    protected void writeData(ByteBuffer buffer) {
-        FileUtilities.writeUUID(buffer, getData().getUUID());
-        FileUtilities.writeUUID(buffer, getData().getParentID());
+    protected void writeData(ByteBuffer buffer) throws IOException {
+        FileWriter.writeUUID(buffer, getData().getUUID());
+        FileWriter.writeUUID(buffer, getData().getParentID());
     }
 
     /**
@@ -138,16 +139,8 @@ public class LinkRow extends AbstractRow<Link> {
          * {@inheritDoc}
          */
         @Override
-        public void addPropertyChangeListener(PropertyChangeListener listener) {
-            this.pcs.addPropertyChangeListener(listener);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void removePropertyChangeListener(PropertyChangeListener listener) {
-            this.pcs.removePropertyChangeListener(listener);
+        public PropertyChangeSupport getPropertyChangeSupport() {
+            return this.pcs;
         }
 
         /**

@@ -6,6 +6,8 @@ import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.fake_engine.GameTile;
 import fr.univubs.inf1603.mahjong.dao.fake_engine.TileZone;
 import fr.univubs.inf1603.mahjong.dao.fake_engine.Zone;
+import fr.univubs.inf1603.mahjong.engine.AbstractTile;
+import fr.univubs.inf1603.mahjong.engine.CommonTile;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -35,16 +37,15 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<Zone> {
     @Test
     public void testSave() {
         try {
-//            UUID zoneID = new UUID(0, 5);
-            TileZone zone1 = new TileZone(new UUID(0, 1), "tileZoneTest1", createRandomTiles(50), null);
-            TileZone zone2 = new TileZone(new UUID(0, 2), "tileZoneTest2", createRandomTiles(50), null);
-            TileZone zone3 = new TileZone(new UUID(0, 3), "tileZoneTest3", createRandomTiles(50), null);
-            TileZone zone4 = new TileZone(new UUID(0, 4), "tileZoneTest4", createRandomTiles(50), null);
+            TileZone zone1 = new TileZone(new UUID(0, 1), "tileZoneTest1", createRandomTiles(1000));
+            TileZone zone2 = new TileZone(new UUID(0, 2), "tileZoneTest2", createRandomTiles(542));
+            TileZone zone3 = new TileZone(new UUID(0, 3), "tileZoneTest3", createRandomTiles(312));
+            TileZone zone4 = new TileZone(new UUID(0, 4), "tileZoneTest4", createRandomTiles(754));
             super.testSave(zoneDao, zone1);
             super.testSave(zoneDao, zone2);
             super.testSave(zoneDao, zone3);
             super.testSave(zoneDao, zone4);
-            Thread.sleep(4000);
+            Thread.sleep(5000);
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -53,8 +54,8 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<Zone> {
     ArrayList<GameTile> createRandomTiles(int nb) {
         ArrayList<GameTile> tiles = new ArrayList<>();
         for (int i = 0; i < nb; i++) {
-            UUID tileID = UUID.randomUUID();
-            GameTile tile = new GameTile(tileID, "Bamboo", String.valueOf(i + 1));
+            AbstractTile absTile = new CommonTile(CommonTile.Family.BAMBOO, CommonTile.Number.NINE);
+            GameTile tile = new GameTile(1, absTile, UUID.randomUUID());
             tiles.add(tile);
         }
         return tiles;
@@ -70,7 +71,7 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<Zone> {
             super.testDelete(zoneDao, new UUID(0, 1));
             super.testDelete(zoneDao, new UUID(0, 4));
             super.testDelete(zoneDao, new UUID(0, 2));
-            Thread.sleep(4000);
+            Thread.sleep(5000);
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }
