@@ -3,37 +3,74 @@ package fr.univubs.inf1603.mahjong.daofile;
 import fr.univubs.inf1603.mahjong.engine.persistence.UniqueIdentifiable;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * @author aliyou, nesrine
  */
 public class RowUtilities {
+    
+    /**
+     * Logging
+     */
+    private static final Logger LOGGER = Logger.getLogger(RowUtilities.class.getName());
 
     /**
-     * 
+     *
      * @param sortedListByPointer
      * @param pointer
-     * @param offset 
+     * @param offset
      */
-    static void updateRowsPointer(List<? extends AbstractRow> sortedListByPointer, long pointer, int offset) { 
-        int pos = getRowPositionFormSortedListByPointer(sortedListByPointer, pointer);
-        for (int i = pos; i < sortedListByPointer.size(); i++) {
-            AbstractRow nextRow = sortedListByPointer.get(i);
-            long newPointer = nextRow.getRowPointer() - offset;
-            newPointer = newPointer > FileHeaderRow.FILE_HEADER_ROW_SIZE ? newPointer : FileHeaderRow.FILE_HEADER_ROW_SIZE;
-//            System.out.println(nextRow + " -> newPointer : " + newPointer);
-            nextRow.setRowPointer(newPointer, false);
+    static void updateRowsPointer(List<? extends AbstractRow> sortedListByPointer, long pointer, int offset) {
+        FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
+        int position = getRowPositionFormSortedListByPointer(sortedListByPointer, pointer);
+
+        System.out.println("\n** RowUtilities.updateRowsPointer : "
+                + "\n\t pointer  : " + pointer
+                + "\n\t offset   : " + offset
+                + "\n\t listSize : " + sortedListByPointer.size()
+                + "\n\t position : " + position);
+        if (!sortedListByPointer.isEmpty()) {
+            System.out.print("\t before   : ");
+            sortedListByPointer.forEach((ar) -> {
+                System.out.print(ar.getRowPointer() + ", ");
+            });
+
+            AbstractRow rowAtPosition = sortedListByPointer.get(position);
+            System.out.println("\n\t type     : " + rowAtPosition.getData().getClass().getSimpleName());
+            if (rowAtPosition.getRowPointer() < pointer) {
+                position += 1;
+                System.out.println("\t position : " + position);
+            }
+            for (int i = position; i < sortedListByPointer.size(); i++) {
+                AbstractRow nextRow = sortedListByPointer.get(i);
+                long oldPointer = nextRow.getRowPointer();
+                long newPointer = oldPointer - offset;
+                if (newPointer >= FileHeaderRow.FILE_HEADER_ROW_SIZE) {
+                    nextRow.setRowPointer(newPointer, false);
+                    LOGGER.log(Level.FINE, "{0}, olPointer : {1} -> newPointer : {2}, offset={3}",
+                            new Object[]{nextRow, oldPointer, newPointer, offset});
+                }
+            }
+
+            System.out.print("\t after    : ");
+            sortedListByPointer.forEach((ar) -> {
+                System.out.print(ar.getRowPointer() + ", ");
+            });
         }
+        System.out.println("\n");
     }
 
     /**
-     * 
+     *
      * @param sortedListByPointer
      * @param pointer
-     * @return 
+     * @return
      */
     static AbstractRow getRowFromSortedListByPointer(List<? extends AbstractRow> sortedListByPointer, long pointer) {
+        FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
         if (!sortedListByPointer.isEmpty()) {
             int pos = getRowPositionFormSortedListByPointer(sortedListByPointer, pointer);
             AbstractRow row = sortedListByPointer.get(pos);
@@ -43,13 +80,15 @@ public class RowUtilities {
         }
         return null;
     }
-    
+
     /**
-     * 
+     *
      * @param sortedListByPointer
-     * @param newRow 
+     * @param newRow
      */
     static void addRowToSortedListByPointer(List<AbstractRow> sortedListByPointer, AbstractRow newRow) {
+        FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
+        FileDAOUtilities.checkNotNull("newRow", newRow);
         if (sortedListByPointer.isEmpty()) {
             sortedListByPointer.add(newRow);
         } else {
@@ -67,11 +106,13 @@ public class RowUtilities {
     }
 
     /**
-     * 
+     *
      * @param sortedListByUUID
-     * @param newRow 
+     * @param newRow
      */
     static void addRowToSortedListByUUID(List<AbstractRow> sortedListByUUID, AbstractRow newRow) {
+        FileDAOUtilities.checkNotNull("sortedListByUUID", sortedListByUUID);
+        FileDAOUtilities.checkNotNull("newRow", newRow);
         if (sortedListByUUID.isEmpty()) {
             sortedListByUUID.add(newRow);
         } else {
@@ -93,12 +134,13 @@ public class RowUtilities {
     }
 
     /**
-     * 
+     *
      * @param sortedListByPointer
      * @param pointer
-     * @return 
+     * @return
      */
     static int getRowPositionFormSortedListByPointer(List<? extends AbstractRow> sortedListByPointer, long pointer) {
+        FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
         int a = 0;
         int b = sortedListByPointer.size() - 1;
         int mid = (a + b) / 2;
@@ -124,6 +166,7 @@ public class RowUtilities {
      * @return Position d'un tuple T dans la liste des tuples.
      */
     static int getRowPositionFromSortedListByUUID(List<? extends AbstractRow> sortedListByUUID, UUID dataID) {
+        FileDAOUtilities.checkNotNull("sortedListByUUID", sortedListByUUID);
         int a = 0;
         int b = sortedListByUUID.size() - 1;
         int mid = (a + b) / 2;

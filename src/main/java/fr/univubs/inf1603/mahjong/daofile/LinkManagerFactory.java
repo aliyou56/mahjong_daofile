@@ -3,9 +3,8 @@ package fr.univubs.inf1603.mahjong.daofile;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
 import fr.univubs.inf1603.mahjong.engine.game.GameTile;
-import java.io.IOException;
+import fr.univubs.inf1603.mahjong.engine.game.TileZone;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  *
@@ -17,7 +16,7 @@ public class LinkManagerFactory {
     /**
      * Factory
      */
-    private static LinkManagerFactory factory;
+    private static LinkManagerFactory factory = null;
     /**
      * Gestionnaire des DAOs.
      */
@@ -26,7 +25,15 @@ public class LinkManagerFactory {
     /**
      * Gestionnaire de lien entre une zone et ses tuiles.
      */
-    private LinkManager<GameTile> tileToZoneLinkManager;
+    private static LinkManager<GameTile> tileToZoneLinkManager = null;
+    /**
+     * Gestionnaire de liens entre les zones et les parties.
+     */
+    private static LinkManager<TileZone> zoneToGameLinkManager = null;
+    /**
+     * Gestionnaire de liens entre les joueurs et les parties.
+     */
+//    private static LinkManager<Player> playerToGameLinkManager = null;
 
     /**
      * Chemin d'accès du repertoire racine.
@@ -40,7 +47,6 @@ public class LinkManagerFactory {
      */
     private LinkManagerFactory(Path rootDir) {
         this.rootDir = rootDir;
-        daoManager = FileDAOManager.getInstance();
     }
 
     /**
@@ -49,9 +55,10 @@ public class LinkManagerFactory {
      * @param rootDir Chemin d'accès du repertoire racine.
      * @return L'instance de la factory.
      */
-    public static LinkManagerFactory getInstance(Path rootDir) {
+    synchronized public static LinkManagerFactory getInstance(Path rootDir) {
         if (factory == null) {
             factory = new LinkManagerFactory(rootDir);
+            daoManager = FileDAOManager.getInstance(rootDir);
         }
         return factory;
     }
@@ -63,16 +70,41 @@ public class LinkManagerFactory {
      * @throws DAOException s'il y'a une erreur lors de l'instanciation du
      * gestionnaire de lien.
      */
-    public LinkManager<GameTile> getTileToZoneLinkManager() throws DAOException {
-        try {
-            if (tileToZoneLinkManager == null) {
-                tileToZoneLinkManager = new LinkManager(Paths.get(rootDir.toString(), "tileToZone.link"));
-                tileToZoneLinkManager.setDAO(daoManager.getTileDao());
-            }
-        } catch (IOException ioe) {
-            throw new DAOException("Erreur IO : " + ioe.getMessage());
+    synchronized public LinkManager<GameTile> getTileToZoneLinkManager() throws DAOException {
+        if (tileToZoneLinkManager == null) {
+            tileToZoneLinkManager = new LinkManager(rootDir.resolve("tileToZone.link"));
+            tileToZoneLinkManager.setDAO(daoManager.getTileDao());
         }
         return tileToZoneLinkManager;
     }
-
+    
+    /**
+     * Rétourne le gestionnaire de lien Zone - Game.
+     *
+     * @return Gestionnaire de lien Zone - Game.
+     * @throws DAOException s'il y'a une erreur lors de l'instanciation du
+     * gestionnaire de lien.
+     */
+    synchronized public LinkManager<TileZone> getZoneToGameLinkManager() throws DAOException {
+        if(zoneToGameLinkManager == null) {
+            zoneToGameLinkManager = new LinkManager(rootDir.resolve("zoneToGame.link"));
+            zoneToGameLinkManager.setDAO(daoManager.getZoneDao());
+        }
+        return zoneToGameLinkManager;
+    }
+    
+    /**
+     * Rétourne le gestionnaire de lien Player - Game.
+     *
+     * @return Gestionnaire de lien Player - Game.
+     * @throws DAOException s'il y'a une erreur lors de l'instanciation du
+     * gestionnaire de lien.
+     */
+//    synchronized public LinkManager<TileZone> getPlayerToGameLinkManager() throws DAOException {
+//        if(playerToGameLinkManager == null) {
+//            playerToGameLinkManager = new LinkManager(rootDir.resolve("playerToGame.link"));
+//            playerToGameLinkManager.setDAO(daoManager.getPlayerDao());
+//        }
+//        return playerToGameLinkManager;
+//    }
 }

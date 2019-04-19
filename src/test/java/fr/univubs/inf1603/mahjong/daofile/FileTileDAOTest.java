@@ -65,12 +65,12 @@ public class FileTileDAOTest extends FileDAOMahJongTest<GameTile> {
     public void testDelete() {
         System.out.println("delete");
         try {
-            super.testDelete(tileDao, new UUID(0, 1));
             super.testDelete(tileDao, new UUID(0, 3));
+            super.testDelete(tileDao, new UUID(0, 8));
             super.testDelete(tileDao, new UUID(0, 2));
             super.testDelete(tileDao, new UUID(0, 5));
             super.testDelete(tileDao, new UUID(0, 9));
-            super.testDelete(tileDao, new UUID(0, 8));
+            super.testDelete(tileDao, new UUID(0, 1));
             super.testDelete(tileDao, new UUID(0, 7));
             Thread.sleep(4000);
         } catch (InterruptedException ex) {

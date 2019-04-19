@@ -1,5 +1,6 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
+import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import fr.univubs.inf1603.mahjong.daofile.LinkRow.Link;
 import java.beans.PropertyChangeSupport;
@@ -7,8 +8,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
- /**
- * Cette classe répresente un conteneur qui encapsule un lien.
+/**
+ * Cette classe répresente un tuple qui encapsule un lien.
  *
  * @author aliyou
  * @version 1.0.0
@@ -25,53 +26,76 @@ public class LinkRow extends AbstractRow<Link> {
     static final int LINK_ROW_SIZE = AbstractRow.ROW_HEADER_SIZE + LINK_SIZE;
 
     /**
-     * Constructeur avec l'identifiant du tuple, le lien et le pointeur de
-     * tuple
+     * Constructeur avec un identifiant de tuple <code>rowID</code>, un lien
+     * encapsulé <code>data</code> dans un tuple et un pointeur de tuple
+     * <code>rowPointer</code>.
      *
-     * @param rowID Identifiant du tuple
-     * @param data Lien encapsulé dans le tuple
-     * @param recordPointer Pointeur du tuple
+     * @param rowID Identifiant d'un tuple
+     * @param data Lien <code>LinkRow.Link</code> encapsulé dans un tuple.
+     * @param rowPointer Pointeur d'un tuple.
      */
     LinkRow(int rowID, Link data, long rowPointer) {
         super(rowID, data, LINK_SIZE, rowPointer);
     }
 
     /**
-     * Lis un tuple contenant un lien à partir d'un tampon d'octets. Rétourne
-     * le tuple lu si les données dans le tampon sont cohérentes sinon
-     * <code>null</code>.
+     * Constructeur avec un processus qui éffectue des opérations
+     * d'entrée/sortie sur un fichier <code>writer</code> et un pointeur de
+     * tuple <code>rowPointer</code>..
      *
-     * @param buffer Tampon d'octets
-     * @param rowPointer Pointeur de tuple
-     * @return Tuple contenant un Lien si les données lues sont cohérentes sinon
-     * <code>null</code>.
+     * @param writer Processus qui éffectue des opérations d'entrée/sortie sur
+     * un fichier
+     * @param rowPointer Pointeur d'un tuple.
+     * @throws DAOException s'il y'a une erruer lors de la lecture d'un lien
+     * <code>LinkRow.Link</code>.
      */
-    static LinkRow readFromBuffer(ByteBuffer buffer, long rowPointer) {
-        if (buffer.remaining() >= LINK_ROW_SIZE - 1) {
-            int rowID = buffer.getInt();
-            UUID childID = new UUID(buffer.getLong(), buffer.getLong());
-            UUID parentID = new UUID(buffer.getLong(), buffer.getLong());
-            Link data = new Link(childID, parentID);
-            return new LinkRow(rowID, data, rowPointer);
-        }
-        return null;
+    LinkRow(DAOFileWriter writer, long rowPointer) throws DAOException {
+        super(writer, LINK_SIZE, rowPointer);
+    }
+
+    /**
+     * Constructeur avec un tampon d'octets <code>buffer</code>.
+     *
+     * @param buffer Tampon d'octets à partir duquel un lien
+     * <code>LinkRow.Link</code> est lu.
+     * @param rowPointer Pointeur d'un tuple.
+     * @throws DAOException s'il y'a une erruer lors de la lecture d'un lien
+     * <code>LinkRow.Link</code>.
+     */
+    LinkRow(ByteBuffer buffer, long rowPointer) throws DAOException {
+        super(buffer, LINK_SIZE, rowPointer);
+    }
+
+    /**
+     * Lis un lien <code>LinkRow.Link</code> à partir d'un tampon d'octets
+     * <code>buffer</code>.
+     *
+     * @param buffer Tampon d'octets à partir duquel le lien
+     * <code>LinkRow.Link</code> est lu.
+     */
+    @Override
+    protected Link readData(ByteBuffer buffer) {
+        UUID childID = new UUID(buffer.getLong(), buffer.getLong());
+        UUID parentID = new UUID(buffer.getLong(), buffer.getLong());
+        Link data = new Link(childID, parentID);
+        return data;
     }
 
     /**
      * Ecrit un lien dans un tampon d'octet.
      *
      * @param buffer Tampon d'octet
-     * @throws java.io.IOException
+     * @throws IOException s'il y'a une erreur lors de l'écriture.
      */
     @Override
     protected void writeData(ByteBuffer buffer) throws IOException {
-        FileWriter.writeUUID(buffer, getData().getUUID());
-        FileWriter.writeUUID(buffer, getData().getParentID());
+        DAOFileWriter.writeUUID(buffer, getData().getUUID());
+        DAOFileWriter.writeUUID(buffer, getData().getParentID());
     }
 
     /**
      * Cette classe répresente un lien entre un objet parent et un objet enfant.
-     * 
+     *
      */
     static class Link implements Persistable {
 
@@ -90,11 +114,11 @@ public class LinkRow extends AbstractRow<Link> {
         private UUID parentID;
 
         /**
-         * Constructeur avec l'identifiant de l'objet enfant et l'identifiant de 
-         * l'objet parent.
-         * 
-         * @param childID Identifiant de l'objet enfant
-         * @param parentID Identifiant de l'objet parent
+         * Constructeur avec l'identifiant d'un objet enfant et l'identifiant d'un
+         * objet parent.
+         *
+         * @param childID Identifiant d'un objet enfant
+         * @param parentID Identifiant d'un objet parent
          */
         Link(UUID childID, UUID parentID) {
             this.childID = childID;
@@ -103,9 +127,9 @@ public class LinkRow extends AbstractRow<Link> {
         }
 
         /**
-         * Rétourne L'identifiant de l'objet enfant qui répresent l'identifiant 
-         * du lien.
-         * 
+         * Rétourne L'identifiant d'un objet enfant qui répresente l'identifiant
+         * d'un lien.
+         *
          * @return Identifiant d'un lien
          */
         @Override
@@ -114,18 +138,18 @@ public class LinkRow extends AbstractRow<Link> {
         }
 
         /**
-         * Rétourne l'identifiant de l'objet parent
-         * 
-         * @return Identifiant de l'objet parent
+         * Rétourne l'identifiant d'un objet parent
+         *
+         * @return Identifiant d'un objet parent
          */
         public UUID getParentID() {
             return parentID;
         }
 
         /**
-         * Modifie l'identifiant de l'objet parent.
-         * 
-         * @param parentID Nouvel identifiant de l'objet parent.
+         * Modifie l'identifiant d'un objet parent.
+         *
+         * @param parentID Nouvel identifiant d'un objet parent.
          */
         public void setParentID(UUID parentID) {
             if (this.parentID != parentID) {
@@ -145,7 +169,7 @@ public class LinkRow extends AbstractRow<Link> {
 
         /**
          * Rétourne une description textuelle d'un lien
-         * 
+         *
          * @return Description textuelle d'un lien.
          */
         @Override

@@ -4,7 +4,6 @@ import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
 import fr.univubs.inf1603.mahjong.engine.game.GameTile;
-//import fr.univubs.inf1603.mahjong.dao.fake_engine.Player;
 import fr.univubs.inf1603.mahjong.engine.game.TileZone;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,17 +23,19 @@ public class FileDAOManager implements DAOManager {
     /**
      * Gestionnaire de DAO
      */
-    private static FileDAOManager daoManager;
+    private static FileDAOManager daoManager = null;
     /**
      * Chemin du repertoire racine
      */
     private final Path rootDir;
 
-//    private FileGameDAO gameDao;
-    private FileZoneDAO zoneDao;
-    private FileTileDAO tileDao;
-//    private FilePlayerDAO playereDao;
+    private static FileGameDAO gameDao = null;
+    private static FileZoneDAO zoneDao = null;
+    private static FileTileDAO tileDao = null;
+//    private static FilePlayerDAO playereDao;
 
+    private static LinkManagerFactory linkManagerFactory = null;
+    
     /**
      * Constructeur privé avec le chemin d'accès du repertoire racine.
      *
@@ -49,7 +50,7 @@ public class FileDAOManager implements DAOManager {
      *
      * @return L'instance du <code>DAOManager</code>
      */
-    public static DAOManager getInstance() {
+    synchronized public static DAOManager getInstance() {
         return getInstance(Paths.get(System.getProperty("user.home"), "MahJong"));
     }
 
@@ -59,9 +60,10 @@ public class FileDAOManager implements DAOManager {
      * @param rootDir Chemin d'accès du repertoire racine.
      * @return L'instance du <code>DAOManager</code>.
      */
-    public static FileDAOManager getInstance(Path rootDir) {
+    synchronized public static FileDAOManager getInstance(Path rootDir) {
         if (daoManager == null) {
             daoManager = new FileDAOManager(rootDir);
+            linkManagerFactory = LinkManagerFactory.getInstance(rootDir);
         }
         return daoManager;
     }
@@ -75,12 +77,13 @@ public class FileDAOManager implements DAOManager {
      * <code>FileGameDAO</code>.
      */
     @Override
-    public DAO getGameDao() throws DAOException {
-//        if(gameDao == null) {
-//            gameDao = new FileGameDAO(rootDir);
-//        }
-//        return gameDao;
-        return null;
+    synchronized public DAO getGameDao() throws DAOException {
+        if(gameDao == null) {
+            gameDao = new FileGameDAO(rootDir);
+            gameDao.setZoneToGameLinkManager(linkManagerFactory.getZoneToGameLinkManager());
+//            gameDao.setPlayerToGameLinkManager(linkManagerFactory.getPlayerToGameLinkManager());
+        }
+        return gameDao;
     }
 
     /**
@@ -91,26 +94,28 @@ public class FileDAOManager implements DAOManager {
      * <code>FileZoneDAO</code>
      */
     @Override
-    public DAO<TileZone> getZoneDao() throws DAOException {
+    synchronized public DAO<TileZone> getZoneDao() throws DAOException {
         if (zoneDao == null) {
             zoneDao = new FileZoneDAO(rootDir);
+            zoneDao.setTileToZoneLinkManager(linkManagerFactory.getTileToZoneLinkManager());
         }
         return zoneDao;
     }
 
     /**
      * Rétourne l'instance du DAO fichier qui gère les tuiles
-     * <code>GameTileOld</code>.
+     * <code>GameTile</code>.
      *
      * @return l'instance du DAO fichier qui gère les tuiles
-     * <code>GameTileOld</code>
+     * <code>GameTile</code>
      * @throws DAOException s'il y'a une erreur lors de l'instanciation de
      * <code>FileTileDAO</code>
      */
     @Override
-    public DAO<GameTile> getTileDao() throws DAOException {
-        if (tileDao == null) {
+    synchronized public DAO<GameTile> getTileDao() throws DAOException {
+        if(tileDao == null) {
             tileDao = new FileTileDAO(rootDir);
+            tileDao.setTileToZoneLinkManager(linkManagerFactory.getTileToZoneLinkManager());
         }
         return tileDao;
     }

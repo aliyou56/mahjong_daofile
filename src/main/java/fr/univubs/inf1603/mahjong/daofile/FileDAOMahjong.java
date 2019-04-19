@@ -2,13 +2,12 @@ package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOMahjong;
+import static fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities.checkNotNull;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
-import fr.univubs.inf1603.mahjong.daofile.FileHeaderRow.FileHeader;
 import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
 import fr.univubs.inf1603.mahjong.engine.persistence.UniqueIdentifiable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,13 +33,13 @@ import java.util.logging.Logger;
  * format d'un fichier de données :
  *        ---------------------------------------------
  *        | ----------------------------------------- |
- *        | | rowID = 0 |          FileHeader       | |  --> FileHeaderRow
+ *        | | rowID = 0 |          FileHeader       | |  --{@literal >} FileHeaderRow
  *        | ----------------------------------------- |
- *        | | rowID = 1 |             T             | |  --> TRow
+ *        | | rowID = 1 |             T             | |  --{@literal >} TRow
  *        | ----------------------------------------- |
- *        | | rowID = 2 |             T             | |  --> TRow
+ *        | | rowID = 2 |             T             | |  --{@literal >} TRow
  *        | ----------------------------------------- |
- *        | | rowID = x |             T             | |  --> TRow
+ *        | | rowID = x |             T             | |  --{@literal >} TRow
  *        | ----------------------------------------- |
  *        ---------------------------------------------
  * </pre>
@@ -67,7 +66,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
     /**
      * Processus qui écrit dans le fichier de données.
      */
-    private FileWriter dataWriter;
+    private DAOFileWriter dataWriter;
     /**
      * Chemin d'accès du fichier de données
      */
@@ -80,10 +79,6 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * Fichier de données
      */
     private RandomAccessFile dataFile;
-    /**
-     * stock l'en-tete du fichier
-     */
-    private FileHeader fileHeader;
     /**
      * Tuple de l'en-tete du fichier
      */
@@ -98,46 +93,45 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
     protected IndexManager indexManager;
     
     /**
-     * Constructeur avec le chemin d'accès du repertoire racine et les noms des
-     * fichiers de données et d'index.
+     * Constructeur avec le chemin d'accès du repertoire racine <code>rootDie</code>,
+     * le nom d'un fichier de données <code>dataFilename</code>, le nom d'un fichier d'inde
+     * <code>indexFilename</code> et la taille d'un tuple <code>rowSize</code>.
      *
-     * @param rootDir Chemin d'accès du repertoire racine. NE DOIT PAS ETRE NULL.
+     * @param rootDirPath Chemin d'accès du repertoire racine. NE DOIT PAS ETRE NULL.
      * @param dataFilename Nom du fichier de données. NE DOIT PAS ETRE NULL.
      * @param indexFilename Nom du fichier d'index. NE DOIT PAS ETRE NULL.
      * @param rowSize Taille d'un tuple. DOIT ETRE SUPERIEUR A ZERO (0).
      * @throws DAOException s'il y'a une erreur lors de l'instanciation.
      */
-    protected FileDAOMahjong(Path rootDir, String dataFilename, String indexFilename, int rowSize) throws DAOException {
-        checkNotNull("rootDir", rootDir);
+    protected FileDAOMahjong(Path rootDirPath, String dataFilename, String indexFilename, int rowSize) throws DAOException {
+        checkNotNull("rootDir", rootDirPath);
         checkNotNull("dataFilename", dataFilename);
-        checkNotNull("indexFilename", indexFilename);
+        checkNotNull("indexFilename", indexFilename); 
         if(rowSize < 0) {
             throw new IllegalArgumentException("rowSize must be greater than zero (0) : " +rowSize);
         }
         try {
-            if (!rootDir.toFile().exists()) {
-                rootDir.toFile().mkdirs();
+            if (!rootDirPath.toFile().exists()) {
+                rootDirPath.toFile().mkdirs();
                 LOGGER.log(Level.INFO, "rootDir created");
             }
-            this.rootDirPath = rootDir;
-            this.dataFilePath = Paths.get(rootDir.toString(), dataFilename);
-            this.indexFilePath = Paths.get(rootDir.toString(), indexFilename);
+            this.rootDirPath = rootDirPath;
+            this.dataFilePath = rootDirPath.resolve(dataFilename);
+            this.indexFilePath = rootDirPath.resolve(indexFilename);
             this.rowSize = rowSize;
             this.dataRowsSortedByPointer = new ArrayList<>();
             this.dataFile = new RandomAccessFile(dataFilePath.toFile(), "rw");
-            this.dataWriter = new FileWriter(dataFile.getChannel());
+            this.dataWriter = new DAOFileWriter(dataFile.getChannel());
             this.indexManager = new IndexManager(indexFilePath, rowSize);
             this.fhr = dataWriter.loadFileHeader();
-            this.fhr.addPropertyChangeListener(dataWriter);
-            this.fileHeader = fhr.getData();
-            System.out.print(fileHeader);
+            System.out.print(fhr.getData());
         } catch (IOException ioe) {
             throw new DAOException("Erreur IO : " + ioe.getMessage());
         }
     }
 
     /**
-     * Rétourne un tuple de données.
+     * Rétourne un tuple de données encapsulant l'objet <code>T</code>.
      * @param rowID Identifiant du tuple de données.
      * @param data Objet <code>T</code> à encapsuler dans le tuple.
      * @param pointer Pointeur du tuple.
@@ -153,8 +147,9 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @param pointer Pointeur du tuple.
      * @return Tuple encapsulant un objet <code>T</code> si les données dans le
      * tampon d'octets sont cohérentes sion <code>null</code>.
+     * @throws DAOException s'il y'a une erreur lors de la lecture d'un tuple depuis le tampon d'octets.
      */
-    protected abstract AbstractRow<T> getDataRow(ByteBuffer buffer, long pointer);
+    protected abstract AbstractRow<T> getDataRow(DAOFileWriter writer, long pointer) throws DAOException;
 
     /**
      * Ajoute un tuple encapsulant l'objet <code>T</code> à la liste des tuples de données
@@ -177,7 +172,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
             UUID dataID = ((UniqueIdentifiable) row.getData()).getUUID();
             Index index = new Index(dataID, row.getRowPointer());
             indexManager.addIndex(index);
-            fileHeader.incrementRowNumber();
+            fhr.getData().incrementRowNumber();
         } catch (IOException ex) {
             throw new DAOException("Erreur IO : \n" + ex.getMessage());
         }
@@ -194,23 +189,32 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      */
     @Override
     final protected T loadFromPersistance(UUID dataID) throws DAOException {
-        try {
-            long pointer = indexManager.getDataRowPointer(dataID);
-            if (pointer != -1) {
-                ByteBuffer buff = dataWriter.read(pointer, rowSize);
-                if (buff != null) {
-                    AbstractRow<T> dataRow = getDataRow(buff, pointer);
-                    if (dataRow != null) {
-                        RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
-                        dataRow.addPropertyChangeListener(dataWriter);
-                        return dataRow.getData();
-                    }
-                }
-            }
-            return null;
-        } catch (IOException ex) {
-            throw new DAOException("Erreur IO : \n" + ex.getMessage());
+        IndexRow ir = indexManager.getRow(dataID);
+        if (ir != null) {
+            AbstractRow<T> dataRow = getDataRow(dataWriter, ir.getData().getPointer());
+//            if (dataRow != null) {
+                RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
+                dataRow.addPropertyChangeListener(dataWriter);
+                return dataRow.getData();
+//            }
         }
+            return null;
+//        try {
+//            long pointer = indexManager.getDataRowPointer(dataID);
+//            if (pointer != -1) {
+//                ByteBuffer buff = dataWriter.read(pointer, rowSize);
+//                if (buff != null) {
+//                    AbstractRow<T> dataRow = getDataRow(buff, pointer);
+//                    if (dataRow != null) {
+//                        RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
+//                        dataRow.addPropertyChangeListener(dataWriter);
+//                        return dataRow.getData();
+//                    }
+//                }
+//            }
+//        } catch (IOException ex) {
+//            throw new DAOException("Erreur IO : \n" + ex.getMessage());
+//        }
     }
  
     /**
@@ -222,11 +226,11 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
     @Override
     protected final List<T> laodAll() throws DAOException {
         ArrayList<T> dataList;
-        if (getRowNumber() != map.size()) {
+        if (getRowNumber() > map.size()) {
             for (IndexRow indexRow : indexManager.getRowsSortedByUUID()) {
-                Index index = indexRow.getData();
-                if (!map.containsKey(index.getUUID())) {
-                    find(index.getUUID());
+                UUID dataID = indexRow.getData().getUUID();
+                if (!map.containsKey(dataID)) {
+                    find(dataID);
                 }
             }
         }
@@ -241,23 +245,27 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @param dataID Identifiant de l'objet encapsulé dans le tuple à retirer.
      * @return <code>true</code> si le tuple a bien été supprimé sinon
      * <code>false</code>.
-     * @throws IOException s'il y'a une erreur lors de la suppression.
+     * @throws DAOException s'il y'a une erreur lors de la suppression.
      */
-    protected final boolean removeDataRow(UUID dataID) throws IOException {
+    protected final boolean removeDataRow(UUID dataID) throws DAOException {
         IndexRow indexRow = (IndexRow) indexManager.getRow(dataID);
         return removeDataRow(indexRow);
     }
      
-    private boolean removeDataRow(IndexRow indexRow) throws IOException {
+    private boolean removeDataRow(IndexRow indexRow) throws DAOException {
         if (indexRow != null) {
-            Index index = indexRow.getData();
-            AbstractRow dataRow = RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
-            removeRowFromRowsList(dataRow);
-            if (dataWriter.deleteFromFile((int) index.getPointer(), rowSize)) {
-                RowUtilities.updateRowsPointer(dataRowsSortedByPointer, index.getPointer(), rowSize);
-                indexManager.removeIndex(indexRow);
-                fileHeader.decrementRowNumber();
-                return true;
+            try {
+                Index index = indexRow.getData();
+                AbstractRow dataRow = RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
+                removeRowFromRowsList(dataRow);
+                if (dataWriter.deleteFromFile((int) index.getPointer(), rowSize)) {
+                    RowUtilities.updateRowsPointer(dataRowsSortedByPointer, index.getPointer(), rowSize);
+                    indexManager.removeIndex(indexRow);
+                    fhr.getData().decrementRowNumber();
+                    return true;
+                }
+            } catch (IOException ex) {
+                throw new DAOException("IO Error : " + ex.getMessage());
             }
         }
         return false;
@@ -266,44 +274,41 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
     /**
      * Supprime un ensemble d'objets <code>T</code> d'un fichier de données.
      * 
-     * @param dataToDelete Liste des objets <code>T</code> à supprimer.
-     * @throws IOException 
+     * @param dataListToDelete Liste des objets <code>T</code> à supprimer.
+     * @throws DAOOException s'il y'a une erreur lors de la suppression.
      */
-    final void deleteFromPersistance(List<T> dataToDelete) throws IOException { //TODO check
-        if (!dataToDelete.isEmpty()) {
-            List<? extends AbstractRow> indexRows = new ArrayList<>();
-            
-            dataToDelete.forEach(data -> {
-                IndexRow indexRow = indexManager.getRow(data.getUUID());
-                RowUtilities.addRowToSortedListByPointer((List<AbstractRow>) indexRows, indexRow);
-            });
-            
-            List<IndexRow> multipleRemoveList = new ArrayList<>();
-            
-            IndexRow firstRow = (IndexRow) indexRows.get(0);
-            long offset1 = firstRow.getRowPointer() + firstRow.getRowSize();
-            for(IndexRow indexRow : (List<IndexRow>) indexRows) {
-                if (offset1 - indexRow.getRowPointer() == firstRow.getRowSize()) {
-                     multipleRemoveList.add(indexRow);
-                } else {
-                    removeDataRow(indexRow);
+    final void deleteFromPersistance(List<T> dataListToDelete) throws DAOException { //TODO check
+        List<IndexRow> multipleRemoveList = indexManager.getRowList(dataListToDelete);
+        if (multipleRemoveList != null) {
+            List<IndexRow> singleRemoveList = indexManager.getSingleRemoveList(multipleRemoveList);
+            if (!singleRemoveList.isEmpty()) {
+                for (IndexRow row : singleRemoveList) {
+                    removeDataRow(row);
                 }
-                offset1 += firstRow.getRowSize();
             }
-           
-            long startPointer = multipleRemoveList.get(0).getRowPointer();
-            multipleRemoveList.forEach(indexRow -> {
-                AbstractRow dataRow = RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
-                if (dataRow != null) {
+            if (!multipleRemoveList.isEmpty()) {
+                multipleRemoveList.forEach(indexRow -> {
+                    AbstractRow dataRow = RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
                     removeRowFromRowsList(dataRow);
+                    fhr.getData().decrementRowNumber();
+                });
+                try {
+                    indexManager.removeIndex(multipleRemoveList);
+                    long startPointer = multipleRemoveList.get(0).getData().getPointer();
+                    int offset = multipleRemoveList.size() * rowSize;
+                    if (dataWriter.deleteFromFile((int) startPointer, offset)) {
+                        RowUtilities.updateRowsPointer(dataRowsSortedByPointer, startPointer, offset);
+                        LOGGER.log(Level.INFO, " [OK] {0} {1} successful deleted -> startPointer : {2} -- offset : {3}",
+                                new Object[]{multipleRemoveList.size(), dataListToDelete.get(0).getClass().getSimpleName(), startPointer, offset});
+                        System.out.println("    { ");
+                        multipleRemoveList.forEach(ir -> {
+                            System.out.println(" \t -> uuid = " + ir.getData().getUUID());
+                        });
+                        System.out.println("    } ");
+                    }
+                } catch (IOException ioe) {
+                    throw new DAOException("IO Error : " + ioe.getMessage());
                 }
-                fileHeader.decrementRowNumber();
-            });
-            indexManager.removeIndex(multipleRemoveList);
-            int offset = indexRows.size() * rowSize;
-            if (dataWriter.deleteFromFile((int) startPointer, offset)) { //startPointer
-                LOGGER.log(Level.INFO, " [OK] {0} {1} successful deleted -> startPointer : {2} -- offset : {3}",
-                        new Object[]{indexRows.size(), dataToDelete.get(0).getClass().getSimpleName(), startPointer, offset});
             }
         }
     }
@@ -332,7 +337,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @return Nombre total de tuple dans le fichier de données
      */
     protected int getRowNumber() {
-        return fileHeader.getRowNumber();
+        return fhr.getData().getRowNumber();
     }
 
     /**
@@ -341,7 +346,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @return Identifiant pour le prochain tuple
      */
     private int getNexRowID() {
-        return fileHeader.getNextRowID();
+        return fhr.getData().getNextRowID();
     }
 
     /**
@@ -350,19 +355,6 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @return Pointeur de données pour le prochain tuple.
      */
     private long getNextRowPointer() {
-        return FileHeaderRow.FILE_HEADER_ROW_SIZE + (fileHeader.getRowNumber() * rowSize);
-    }
-    
-    /**
-     * Vérifie si un objet est null ou pas. Lève une exception de type
-     * <code>IllegalArgumentException</code> si l'ojet est <code>null</code>.
-     *
-     * @param name Nom de l'objet à tester.
-     * @param obj Objet à tester.
-     */
-    static private void checkNotNull(String name, Object obj) {
-        if (obj == null) {
-            throw new IllegalArgumentException(name + " == null");
-        }
-    }
+        return FileHeaderRow.FILE_HEADER_ROW_SIZE + (getRowNumber() * rowSize);
+    } 
 }

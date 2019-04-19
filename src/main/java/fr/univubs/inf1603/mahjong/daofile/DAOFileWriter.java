@@ -1,6 +1,7 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.dao.DAOException;
+import static fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities.checkNotNull;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
@@ -17,7 +18,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * La classe <code>FileWriter</code> gère tout ce qui est lecture et écriture dans
+ * La classe <code>DAOFileWriter</code> gère tout ce qui est lecture et écriture dans
  * un fichier. Elle fournit des méthodes qui écrivent ou suppriment des
  * tuples d'un fichier. Elle fournit également des méthodes statiques qui permettent 
  * d'écrire ou de lire des objets tels <code>UUID</code>, <code>String</code> dans
@@ -27,12 +28,12 @@ import java.util.logging.Logger;
  * @author aliyou, nesrine
  * @version 1.0.0
  */
-public class FileWriter implements PropertyChangeListener {
+public class DAOFileWriter implements PropertyChangeListener {
 
     /**
      * Logging
      */
-    private final static Logger LOGGER = Logger.getLogger(FileWriter.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(DAOFileWriter.class.getName());
 
     /**
      * Temps d'attente (en séconde) avant d'écrire dans un fichier.
@@ -66,7 +67,7 @@ public class FileWriter implements PropertyChangeListener {
      *
      * @param fileChannel FileChannel. NE DOIT PAS ETRE NULL.
      */
-    FileWriter(FileChannel fileChannel) {
+    DAOFileWriter(FileChannel fileChannel) {
         checkNotNull("fileChannel", fileChannel);
         this.fileChannel = fileChannel;
         this.multipleWritingList = new ArrayList<>();
@@ -86,18 +87,18 @@ public class FileWriter implements PropertyChangeListener {
      * données.
      */
     synchronized ByteBuffer read(long position, int lenght) throws IOException {
-        if (position <= -1) {
-            throw new IllegalArgumentException("position must be positive : " + position);
+        if (position < 0) {
+            throw new IllegalArgumentException("position must be positive : position=" + position);
         }
         if (position > fileChannel.size()) {
-            throw new IllegalArgumentException("position must be less than file size : " + position + " size : " + fileChannel.size());
+            throw new IllegalArgumentException("position must be less than file size : position=" + position + ", file size=" + fileChannel.size());
         }
         if (lenght < 0) {
-            throw new IllegalArgumentException("lenght must be greater than zero : " + lenght);
+            throw new IllegalArgumentException("lenght must be greater than zero : lenght=" + lenght);
         }
         fileChannel.position(position);
         ByteBuffer buffer = ByteBuffer.allocate(lenght);
-        if (fileChannel.read(buffer) > 0) {
+        if (fileChannel.read(buffer) != -1) {
             buffer.flip();
             return buffer;
         }
@@ -115,7 +116,7 @@ public class FileWriter implements PropertyChangeListener {
      */
     synchronized int write(long position, ByteBuffer buffer) throws IOException {
         checkNotNull("buffer", buffer);
-        if (position > -1) {
+        if (position >= 0) {
             buffer.flip();
             fileChannel.position(position);
             while (buffer.hasRemaining()) {
@@ -147,6 +148,7 @@ public class FileWriter implements PropertyChangeListener {
                 for (AbstractRow row : multipleWritingList) {
                     if (offset - row.getRowPointer() == firstRow.getRowSize()) {
                         if (row.getRowPointer() > -1) {
+//                        if (row.hasChanged()) {
                             row.write(buffer);
                         }
                         offset += firstRow.getRowSize();
@@ -165,11 +167,13 @@ public class FileWriter implements PropertyChangeListener {
 
             if (!singleWritingList.isEmpty()) {
                 for (AbstractRow row : singleWritingList) {
-                    ByteBuffer buffer = ByteBuffer.allocate(row.getRowSize());
-                    row.write(buffer);
-                    if (write(row.getRowPointer(), buffer) != -1) {
-                        System.out.println(" single writng list writed on disk -> " + row.getClass().getSimpleName());
-                    }
+//                    if (row.hasChanged()) {
+                        ByteBuffer buffer = ByteBuffer.allocate(row.getRowSize());
+                        row.write(buffer);
+                        if (write(row.getRowPointer(), buffer) != -1) {
+                            System.out.println(" single writng list writed on disk -> " + row.getClass().getSimpleName());
+                        }
+//                    }
                 }
                 singleWritingList.clear();
             }
@@ -206,8 +210,8 @@ public class FileWriter implements PropertyChangeListener {
      * @param row Tuple à ajouter. NE DOIT PAS ETRE NULL.
      */
     private boolean add(List<AbstractRow> sortedListByPointer, AbstractRow row) {
-        checkNotNull("sortedListByPointer", sortedListByPointer);
-        checkNotNull("row", row);
+//        checkNotNull("sortedListByPointer", sortedListByPointer);
+//        checkNotNull("row", row);
         if (!sortedListByPointer.contains(row)) {
             RowUtilities.addRowToSortedListByPointer(sortedListByPointer, row);
             if (future != null) {
@@ -221,12 +225,14 @@ public class FileWriter implements PropertyChangeListener {
 
     /**
      *
-     * @param evt
+     * @param evt Evenement
      */
     @Override
     synchronized public void propertyChange(PropertyChangeEvent evt) {
         AbstractRow row = (AbstractRow) evt.getSource();
-        addRowToSingleWritingList(row);
+        if(row.hasChanged()) {
+            addRowToSingleWritingList(row);
+        } 
     }
 
     /**
@@ -283,17 +289,20 @@ public class FileWriter implements PropertyChangeListener {
      * @return Tuple d'en-tete de fichier <code>FileHeader</code>.
      * @throws IOException s'il y'a une erreur lors du chargement.
      */
-    /*synchronized*/ FileHeaderRow loadFileHeader() throws IOException {
+    FileHeaderRow loadFileHeader() throws IOException {
         FileHeaderRow fhr;
         if (fileChannel.size() != 0) {
-            ByteBuffer buff = read(0, FileHeaderRow.FILE_HEADER_ROW_SIZE);
-            fhr = FileHeaderRow.readFromBuffer(buff);
-            if (fhr == null) {
+            try {
+                fhr = new FileHeaderRow(this);
+            } catch (DAOException de) {
+                LOGGER.log(Level.INFO, "L'en-tete du fichier n'a pas pu etre lue : {0}\n "
+                        + "Une nouvelle en-tete de ficheir a été créée.", de.getMessage());
                 fhr = new FileHeaderRow(new FileHeaderRow.FileHeader(0, 0));
             }
         } else {
             fhr = new FileHeaderRow(new FileHeaderRow.FileHeader(0, 0));
         }
+        fhr.addPropertyChangeListener(this);
         return fhr;
     }
 
@@ -385,18 +394,5 @@ public class FileWriter implements PropertyChangeListener {
             return new String(buf);
         }
         return null;
-    }
-
-    /**
-     * Vérifie si un objet est null ou pas. Lève une exception de type
-     * <code>IllegalArgumentException</code> si l'ojet est <code>null</code>.
-     *
-     * @param name Nom de l'objet à tester.
-     * @param obj Objet à tester.
-     */
-    static private void checkNotNull(String name, Object obj) {
-        if (obj == null) {
-            throw new IllegalArgumentException(name + " == null");
-        }
     }
 }

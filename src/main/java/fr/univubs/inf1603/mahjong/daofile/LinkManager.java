@@ -11,24 +11,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Cette classe gère l'ensemble des liens {@link LinkRow.Link} entre un objet fils
+ * Cette classe gère l'ensemble des liens {@link LinkRow.Link} entre un objet enfant
  * <code>T</code> et un objet parent. Un Lien est répresenté par les
  * identifiants <code>UUID</code> des 2 objets qui sont liés. Chaque lien est
  * encapsulé dans un tuple de lien <code>LinkRow</code>.
  *
  * <pre>
- * format d'un fichier d'index :
+ * 
+ *  format d'un fichier de lien :
+ * 
  *        ---------------------------------------------
  *        | ----------------------------------------- |
- *        | | rowID = 0 |        FileHeader         | |  --> FileHeaderRow
+ *        | | rowID = 0 |        FileHeader         | |  --{@literal >} FileHeaderRow
  *        | ----------------------------------------- |
- *        | | rowID = 1 | Link=[childID | parentID] | |  --> LinkRow
+ *        | | rowID = 1 | Link=[childID | parentID] | |  --{@literal >} LinkRow
  *        | ----------------------------------------- |
- *        | | rowID = 2 | Link=[childID | parentID] | |  --> LinkRow
+ *        | | rowID = 2 | Link=[childID | parentID] | |  --{@literal >} LinkRow
  *        | ----------------------------------------- |
- *        | | rowID = x | Link=[childID | parentID] | |  --> LinkRow
+ *        | | rowID = x | Link=[childID | parentID] | |  --{@literal >} LinkRow
  *        | ----------------------------------------- |
  *        ---------------------------------------------
  * </pre>
@@ -36,10 +40,14 @@ import java.util.UUID;
  * @see AbstractRowManager
  * @author aliyou, nesrine
  * @version 1.0.0
- * @param <T> Objet enfant du lien.
+ * @param <T> Objet <code>T</code> enfant du lien.
  */
 public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkRow> {
 
+    /**
+     * Logging
+     */
+    private static final Logger LOGGER = Logger.getLogger(LinkManager.class.getName());
     /**
      * Tableau associatif associant l'identifiant d'un objet parent à un
      * ensemble d'identifiants d'objets enfants.
@@ -56,14 +64,15 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * @param linkFilePath Chemin d'accès du fichier de lien.
      * @throws IOException s'il y'a une erreur lors de l'instanciation.
      */
-    LinkManager(Path linkFilePath) throws IOException {
+    LinkManager(Path linkFilePath) throws DAOException {
         super(linkFilePath, LinkRow.LINK_ROW_SIZE);
+        System.out.println(" -> LinkManager");
         this.mapParentChild = new HashMap<>();
         getRowsSortedByRowPointer().forEach((row) -> {
             Link link = (Link) row.getData();
             putInMap(link);
         });
-        System.out.println(" -> LinkManager");
+//        printMap();
     }
 
     /**
@@ -73,6 +82,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      */
     void setDAO(DAO<T> dao) {
         this.dao = (FileDAOMahjong<T>) dao;
+//        System.out.println(" set tileDAO : "+this.dao);
     }
 
     /**
@@ -105,31 +115,30 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
         }
     }
 
-//    boolean isChildLinkedToAParent(UUID childID) {
-//        return mapParentChild.entrySet().stream().anyMatch((entry) -> (entry.getValue().contains(childID)));
-//    }
-
-//    private void printMap() {
-//        mapParentChild.entrySet().forEach((entry) -> {
-//            System.out.println(entry.getKey() + " -> " + entry.getValue());
-//        });
-////////        for(Map.Entry<UUID, ArrayList<UUID>> entry : mapParentChild.entrySet()) {
-////////            System.out.println(entry.getKey() +" -> "+ entry.getValue());
-////////        }
-//    }
+    private void printMap() {
+        System.out.println("");
+        mapParentChild.entrySet().forEach((entry) -> {
+            System.out.println(entry.getKey() + " -> " + entry.getValue());
+        });
+        System.out.println("");
+//////        for(Map.Entry<UUID, ArrayList<UUID>> entry : mapParentChild.entrySet()) {
+//////            System.out.println(entry.getKey() +" -> "+ entry.getValue());
+//////        }
+    }
+    
     /**
      * {@inheritDoc}
      */
     @Override
-    protected LinkRow readRowFromBuffer(ByteBuffer buffer, long rowPointer) {
-        return LinkRow.readFromBuffer(buffer, rowPointer);
+    protected LinkRow createRow(ByteBuffer buffer, long rowPointer) throws DAOException {
+        return new LinkRow(buffer, rowPointer);
     }
 
     /**
-     * Lie un ensemble d'objets enfant à un objet parent.
+     * Lie un ensemble d'objets <code>T</code> enfant à un objet parent.
      *
      * @param parentID Identifiant de l'objet parent.
-     * @param children Liste des objets enfants.
+     * @param children Liste des objets <code>T</code> enfants.
      * @throws DAOException s'il y'a une erreur lors de la liaison.
      */
     void addChildren(UUID parentID, List<T> children) throws DAOException {
@@ -150,51 +159,63 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
     }
 
     /**
-     * Supprime tous les liens existant entre un ensemble d'objets enfants et un 
+     * Supprime tous les liens existant entre un ensemble d'objets enfants <code>T</code>  et un 
      * objet parent.
      * 
      * @param children Liste des objets enfants.
      * @throws IOException s'il y'a une erreur lors de la suppression.
      */
-    void removeChildren(List<T> children) throws IOException {
+    void removeChildren(List<T> children) throws IOException, DAOException {
         if (!children.isEmpty()) {
-            LinkRow firstLinkRow = getRow(children.get(0).getUUID());
-            long pointer = firstLinkRow.getRowPointer();
-            for (T child : children) {
-                LinkRow linkRow = getRow(child.getUUID());
-                if (pointer > linkRow.getRowPointer()) {
-                    pointer = linkRow.getRowPointer();
-                    firstLinkRow = linkRow;
+            List<LinkRow> multipleRemoveList = super.getRowList(children);
+            List<LinkRow> singleRemoveList = super.getSingleRemoveList(multipleRemoveList);
+            if (!singleRemoveList.isEmpty()) {
+                for (LinkRow linkRow : singleRemoveList) {
+                    super.removeRow(linkRow);
+                    removeFromMap(linkRow.getData());
                 }
-                super.removeRowFromRowsList(linkRow);
-                removeFromMap(linkRow.getData());
             }
-
-            int offset = children.size() * LinkRow.LINK_ROW_SIZE;
-            if (rowWriter.deleteFromFile((int) pointer, offset)) {
-                super.updateRowsPointer(firstLinkRow.getRowPointer(), offset);
-                dao.deleteFromPersistance(children);
+            if(!multipleRemoveList.isEmpty()) {
+                long startPointer = multipleRemoveList.get(0).getRowPointer();
+                multipleRemoveList.forEach(linkRow -> {
+                    super.removeRowFromRowsList(linkRow);
+                    removeFromMap(linkRow.getData());
+                });
+                int offset = multipleRemoveList.size() * rowSize;
+                if (rowWriter.deleteFromFile((int) startPointer, offset)) {
+                    super.updateRowsPointer(startPointer, offset);
+                    dao.deleteFromPersistance(children);
+                    LOGGER.log(Level.INFO, " [OK] {0} Link successful deleted -> startPointer : {1} -- offset : {2}",
+                            new Object[]{multipleRemoveList.size(), startPointer, offset});
+                    System.out.println("    { ");
+                    multipleRemoveList.forEach(linkRow -> {
+                        System.out.println(" \t -> childID = " + linkRow.getData().getUUID() + " : parentID = " + linkRow.getData().getParentID());
+                    });
+                    System.out.println("    } ");
+                }
             }
         }
+//        printMap();
     }
 
     /**
-     * Charge tous les objets enfants <code>T</code> liés à un objet parent en
-     * mémoire.
+     * Charge en mémoire tous les objets enfants <code>T</code> liés à un objet parent.
      *
      * @param parentID Identifiant de l'objet parent du lien.
      * @return Liste des objets enfants <code>T</code>.
      * @throws DAOException s'il y'a une erreur lors du chargement.
      */
     ArrayList<T> loadChildren(UUID parentID) throws DAOException {
+        ArrayList<T> children = new ArrayList<>();
+//        System.err.println("\n loadChildren -> parentID="+parentID + ", nbChildren={ ");
         if (mapParentChild.containsKey(parentID)) {
-            ArrayList<T> children = new ArrayList<>();
             for (UUID childID : mapParentChild.get(parentID)) {
                 T child = dao.find(childID);
+//                System.err.println(" \tchilID="+childID + ", loadedID="+child.getUUID());
                 children.add(child);
             }
-            return children;
         }
-        return null;
+//        System.err.println("   }\n");
+        return children;
     }
 }
