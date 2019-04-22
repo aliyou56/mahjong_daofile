@@ -1,7 +1,8 @@
-package fr.univubs.inf1603.mahjong.daofile;
+package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.dao.DAOException;
 import static fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities.checkNotNull;
+import fr.univubs.inf1603.mahjong.daofile.exception.ByteBufferException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
@@ -26,7 +27,7 @@ import java.util.logging.Logger;
  * 
  * 
  * @author aliyou, nesrine
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class DAOFileWriter implements PropertyChangeListener {
 
@@ -66,8 +67,9 @@ public class DAOFileWriter implements PropertyChangeListener {
      * Constructeur avec un FileChannel
      *
      * @param fileChannel FileChannel. NE DOIT PAS ETRE NULL.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException s'il y'a une erreur lors de l'instanciation.
      */
-    DAOFileWriter(FileChannel fileChannel) {
+    public DAOFileWriter(FileChannel fileChannel) throws DAOFileException {
         checkNotNull("fileChannel", fileChannel);
         this.fileChannel = fileChannel;
         this.multipleWritingList = new ArrayList<>();
@@ -80,21 +82,22 @@ public class DAOFileWriter implements PropertyChangeListener {
      *
      * @param position Position à partir de laquelle la lecture est commencée. -
      * DOIT ETRE POSITIF - NE DOIT PAS ETRE SUPERIEUR A LA TAILLE DU FICHIER.
-     * @param length Nombre d'octets à lire.
+     * @param lenght Nombre d'octets à lire.
      * @return Le tampon contenant les données lues s'il y'a des données à lire
      * à partir du pointeur sinon <code>null</code>
      * @throws IOException s'il y'a une erreur lors de la lecture du fichier de
      * données.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les paramètres fournis ne sont pas acceptés.
      */
-    synchronized ByteBuffer read(long position, int lenght) throws IOException {
+    synchronized public ByteBuffer read(long position, int lenght) throws IOException, DAOFileException {
         if (position < 0) {
-            throw new IllegalArgumentException("position must be positive : position=" + position);
+            throw new DAOFileException("position must be positive : position=" + position);
         }
         if (position > fileChannel.size()) {
-            throw new IllegalArgumentException("position must be less than file size : position=" + position + ", file size=" + fileChannel.size());
+            throw new DAOFileException("position must be less than file size : position=" + position + ", file size=" + fileChannel.size());
         }
         if (lenght < 0) {
-            throw new IllegalArgumentException("lenght must be greater than zero : lenght=" + lenght);
+            throw new DAOFileException("lenght must be greater than zero : lenght=" + lenght);
         }
         fileChannel.position(position);
         ByteBuffer buffer = ByteBuffer.allocate(lenght);
@@ -113,8 +116,9 @@ public class DAOFileWriter implements PropertyChangeListener {
      * @param buffer Tampon d'octets à écrire dans le fichier. NE DOIT PAS ETRE NULL.
      * @return Le nombre d'octets écrit dans le ficheir.
      * @throws IOException s'il y'a une erreur lors de l'écriture.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les paramètres fournios ne sont pas acceptés.
      */
-    synchronized int write(long position, ByteBuffer buffer) throws IOException {
+    synchronized public int write(long position, ByteBuffer buffer) throws IOException, DAOFileException {
         checkNotNull("buffer", buffer);
         if (position >= 0) {
             buffer.flip();
@@ -177,7 +181,7 @@ public class DAOFileWriter implements PropertyChangeListener {
                 }
                 singleWritingList.clear();
             }
-        } catch (IOException | DAOException e) {
+        } catch (DAOFileException | IOException e) {
             e.printStackTrace(System.out);
         }
     };
@@ -187,8 +191,10 @@ public class DAOFileWriter implements PropertyChangeListener {
      * d'un seul coup dans un fichier <code>multipleWritingList</code>.
      * 
      * @param row Tuple à ajouter. NE DOIT PAS ETRE NULL.
+     * @return {@code true} si le tuple a été ajouté sinon {@code false}
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException s'il y'a une erreur lors d el'ajout du tuple.
      */
-    synchronized boolean addRowToMultipleWritingList(AbstractRow row) {
+    synchronized public boolean addRowToMultipleWritingList(AbstractRow row) throws DAOFileException {
         return add(multipleWritingList, row);
     }
 
@@ -197,8 +203,10 @@ public class DAOFileWriter implements PropertyChangeListener {
      * dans un fichier <code>singleWritingList</code>.
      * 
      * @param row Tuple à ajouter. NE DOIT PAS ETRE NULL.
+     * @return {@code true} si le tuple a été ajouté sinon {@code false}
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException s'il y'a une erreur lors de l'ajout du tuple.
      */
-    synchronized boolean addRowToSingleWritingList(AbstractRow row) {
+    synchronized public boolean addRowToSingleWritingList(AbstractRow row) throws DAOFileException {
         return add(singleWritingList, row);
     }
 
@@ -209,7 +217,7 @@ public class DAOFileWriter implements PropertyChangeListener {
      * @param sortedListByPointer Liste trié à laquelle le tuple est ajouté.
      * @param row Tuple à ajouter. NE DOIT PAS ETRE NULL.
      */
-    private boolean add(List<AbstractRow> sortedListByPointer, AbstractRow row) {
+    private boolean add(List<AbstractRow> sortedListByPointer, AbstractRow row) throws DAOFileException {
 //        checkNotNull("sortedListByPointer", sortedListByPointer);
 //        checkNotNull("row", row);
         if (!sortedListByPointer.contains(row)) {
@@ -231,7 +239,11 @@ public class DAOFileWriter implements PropertyChangeListener {
     synchronized public void propertyChange(PropertyChangeEvent evt) {
         AbstractRow row = (AbstractRow) evt.getSource();
         if(row.hasChanged()) {
-            addRowToSingleWritingList(row);
+            try {
+                addRowToSingleWritingList(row);
+            } catch (DAOFileException ex) {
+                LOGGER.log(Level.SEVERE, ex.getMessage());
+            }
         } 
     }
 
@@ -248,9 +260,10 @@ public class DAOFileWriter implements PropertyChangeListener {
      * @param offset Nombre d'octets à supprimer. DOIT ETRE SUPERIEUR A 0.
      * @return <code>true</code> si la suppression a été éffectuée avec succès sinon
      * <code>false</code>.
-     * @throws IOException s'il y'a une erreur lors de la suppression.
+     * @throws IOException s'il y'a une erreur d'entré/sorti lors de la suppression.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    synchronized boolean deleteFromFile(int position, int offset) throws IOException {
+    synchronized public boolean deleteFromFile(int position, int offset) throws IOException, DAOFileException {
         if (position < 0) {
             throw new IllegalArgumentException("position must be greater than 0 : " + position);
         }
@@ -288,19 +301,20 @@ public class DAOFileWriter implements PropertyChangeListener {
      *
      * @return Tuple d'en-tete de fichier <code>FileHeader</code>.
      * @throws IOException s'il y'a une erreur lors du chargement.
+     * @throws DAOFileException s'il y'a une erruer lors de l'instanciation du tuple d'en-tete.
      */
-    FileHeaderRow loadFileHeader() throws IOException {
+    public FileHeaderRow loadFileHeader() throws IOException, DAOFileException {
         FileHeaderRow fhr;
         if (fileChannel.size() != 0) {
             try {
                 fhr = new FileHeaderRow(this);
-            } catch (DAOException de) {
+            } catch (DAOFileException de) {
                 LOGGER.log(Level.INFO, "L'en-tete du fichier n'a pas pu etre lue : {0}\n "
                         + "Une nouvelle en-tete de ficheir a été créée.", de.getMessage());
-                fhr = new FileHeaderRow(new FileHeaderRow.FileHeader(0, 0));
+                fhr = new FileHeaderRow(new FileHeader(0, 0));
             }
         } else {
-            fhr = new FileHeaderRow(new FileHeaderRow.FileHeader(0, 0));
+            fhr = new FileHeaderRow(new FileHeader(0, 0));
         }
         fhr.addPropertyChangeListener(this);
         return fhr;
@@ -315,15 +329,16 @@ public class DAOFileWriter implements PropertyChangeListener {
      * @param uuidToWrite Identifiant à écrire dans le tampon d'octets. NE DOIT
      * PAS ETRE NULL.
      * @return Le nombre d'octets écrits dans le tampon d'octets <code>buffer</code>.
-     * @throws IOException si l'identifiant <code>uuidToWrite</code> ne peut pas
+     * @throws ByteBufferException si l'identifiant <code>uuidToWrite</code> ne peut pas
      * etre rajouté au tampon d'octets <code>buffer</code>.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les paramètres fournis ne sont pas acceptés.
      */
-    public static int writeUUID(ByteBuffer buffer, UUID uuidToWrite) throws IOException {
+    public static int writeUUID(ByteBuffer buffer, UUID uuidToWrite) throws ByteBufferException, DAOFileException {
         checkNotNull("buffer", buffer);
         checkNotNull("uuidToWrite", uuidToWrite);
         int lenght = Long.BYTES * 2;
         if ((buffer.capacity() - buffer.position()) < lenght) {
-            throw new IOException("Impossible d'ajouter l'identifiant '" + uuidToWrite.toString() + "' au buffer '" + buffer + "'");
+            throw new ByteBufferException("Impossible d'ajouter l'identifiant '" + uuidToWrite.toString() + "' au buffer \n\t'" + buffer + "'");
         }
         buffer.putLong(uuidToWrite.getMostSignificantBits());
         buffer.putLong(uuidToWrite.getLeastSignificantBits());
@@ -339,15 +354,16 @@ public class DAOFileWriter implements PropertyChangeListener {
      * @param stringToWrite Chaine de caractères à écrire dans le tampon. NE
      * DOIT PAS ETRE NULLE.
      * @return Le nombre d'octets écrits dans le tampon d'octets <code>buffer</code>.
-     * @throws IOException si la chaine de caractèere <code>stringToWrite</code>
+     * @throws ByteBufferException si la chaine de caractèere <code>stringToWrite</code>
      * ne peut pas etre rajoutée au tampon d'octets <code>buffer</code>.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les paramètres fournis ne sont pas acceptés.
      */
-    public static int writeString(ByteBuffer buffer, String stringToWrite) throws IOException {
+    public static int writeString(ByteBuffer buffer, String stringToWrite) throws ByteBufferException, DAOFileException {
         checkNotNull("buffer", buffer);
         checkNotNull("stringToWrite", stringToWrite);
         int lenght = Integer.BYTES + stringToWrite.length();
         if((buffer.capacity() - buffer.position()) <  lenght) {
-            throw new IOException("Impossible d'ajouter la chaine de caractères '" +stringToWrite+ "' au buffer '" + buffer + "'");
+            throw new ByteBufferException("Impossible d'ajouter la chaine de caractères '" +stringToWrite+ "' au buffer '" + buffer + "'");
         }
         buffer.putInt(stringToWrite.length());
         buffer.put(stringToWrite.getBytes());
@@ -365,8 +381,9 @@ public class DAOFileWriter implements PropertyChangeListener {
      * tampon d'octets <code>buffer</code> est supérieur ou égal à la taille
      * d'un entier + l'entier lu au début du tampon d'octets <code>buffer</code>
      * sinon <code>null</code>.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les paramètres fournis ne sont pas acceptés.
      */
-    public static String readString(ByteBuffer buffer) {
+    public static String readString(ByteBuffer buffer) throws DAOFileException {
         checkNotNull("buffer", buffer);
         if (buffer.remaining() >= 4) {
             int lenght = buffer.getInt();
@@ -385,8 +402,9 @@ public class DAOFileWriter implements PropertyChangeListener {
      * @return La chaine de caratères lue si le nombre d'octes restant dans le
      * tampon d'octets <code>buffer</code> est supérieur ou égal à la taille
      * <code>lenght</code> sinon <code>null</code>.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les paramètres fournis ne sont pas acceptés.
      */
-    public static String readString(ByteBuffer buffer, int lenght) {
+    public static String readString(ByteBuffer buffer, int lenght) throws DAOFileException {
         checkNotNull("buffer", buffer);
         if (buffer.remaining() >= lenght) {
             byte buf[] = new byte[lenght];

@@ -1,10 +1,10 @@
-package fr.univubs.inf1603.mahjong.daofile;
+package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
-import fr.univubs.inf1603.mahjong.daofile.LinkRow.Link;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.LinkRow.Link;
+import fr.univubs.inf1603.mahjong.daofile.exception.ByteBufferException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import java.beans.PropertyChangeSupport;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
@@ -12,7 +12,7 @@ import java.util.UUID;
  * Cette classe répresente un tuple qui encapsule un lien.
  *
  * @author aliyou
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class LinkRow extends AbstractRow<Link> {
 
@@ -33,23 +33,23 @@ public class LinkRow extends AbstractRow<Link> {
      * @param rowID Identifiant d'un tuple
      * @param data Lien <code>LinkRow.Link</code> encapsulé dans un tuple.
      * @param rowPointer Pointeur d'un tuple.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException s'il y'a une erreur lors de l'instanciation.
      */
-    LinkRow(int rowID, Link data, long rowPointer) {
+    public LinkRow(int rowID, Link data, long rowPointer) throws DAOFileException {
         super(rowID, data, LINK_SIZE, rowPointer);
     }
 
     /**
      * Constructeur avec un processus qui éffectue des opérations
      * d'entrée/sortie sur un fichier <code>writer</code> et un pointeur de
-     * tuple <code>rowPointer</code>..
+     * tuple <code>rowPointer</code>.
      *
      * @param writer Processus qui éffectue des opérations d'entrée/sortie sur
      * un fichier
      * @param rowPointer Pointeur d'un tuple.
-     * @throws DAOException s'il y'a une erruer lors de la lecture d'un lien
-     * <code>LinkRow.Link</code>.
+     * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un lien.
      */
-    LinkRow(DAOFileWriter writer, long rowPointer) throws DAOException {
+    public LinkRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
         super(writer, LINK_SIZE, rowPointer);
     }
 
@@ -59,10 +59,10 @@ public class LinkRow extends AbstractRow<Link> {
      * @param buffer Tampon d'octets à partir duquel un lien
      * <code>LinkRow.Link</code> est lu.
      * @param rowPointer Pointeur d'un tuple.
-     * @throws DAOException s'il y'a une erruer lors de la lecture d'un lien
+     * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un lien
      * <code>LinkRow.Link</code>.
      */
-    LinkRow(ByteBuffer buffer, long rowPointer) throws DAOException {
+    public LinkRow(ByteBuffer buffer, long rowPointer) throws DAOFileException {
         super(buffer, LINK_SIZE, rowPointer);
     }
 
@@ -72,6 +72,7 @@ public class LinkRow extends AbstractRow<Link> {
      *
      * @param buffer Tampon d'octets à partir duquel le lien
      * <code>LinkRow.Link</code> est lu.
+     * @return Le lien lu.
      */
     @Override
     protected Link readData(ByteBuffer buffer) {
@@ -85,12 +86,16 @@ public class LinkRow extends AbstractRow<Link> {
      * Ecrit un lien dans un tampon d'octet.
      *
      * @param buffer Tampon d'octet
-     * @throws IOException s'il y'a une erreur lors de l'écriture.
+     * @throws DAOFileException s'il y'a une erreur lors de l'écriture.
      */
     @Override
-    protected void writeData(ByteBuffer buffer) throws IOException {
-        DAOFileWriter.writeUUID(buffer, getData().getUUID());
-        DAOFileWriter.writeUUID(buffer, getData().getParentID());
+    protected void writeData(ByteBuffer buffer) throws DAOFileException {
+        try {
+            DAOFileWriter.writeUUID(buffer, getData().getUUID());
+            DAOFileWriter.writeUUID(buffer, getData().getParentID());
+        } catch (ByteBufferException ex) {
+            throw new DAOFileException(ex.getMessage(), ex);
+        }
     }
 
     /**
@@ -120,7 +125,7 @@ public class LinkRow extends AbstractRow<Link> {
          * @param childID Identifiant d'un objet enfant
          * @param parentID Identifiant d'un objet parent
          */
-        Link(UUID childID, UUID parentID) {
+        public Link(UUID childID, UUID parentID) {
             this.childID = childID;
             this.parentID = parentID;
             this.pcs = new PropertyChangeSupport(this);

@@ -52,7 +52,7 @@ public class FileTileDAOTest extends FileDAOMahJongTest<GameTile> {
             super.testSave(tileDao, tile6);
             GameTile tile7 = new GameTile(7, new SeasonTile(SeasonTile.Season.SPRING), new UUID(0, 7));
             super.testSave(tileDao, tile7);
-            Thread.sleep(3000);
+            Thread.sleep(6000);
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }

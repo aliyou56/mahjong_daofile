@@ -1,7 +1,6 @@
 
-package fr.univubs.inf1603.mahjong.daofile;
+package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -18,11 +17,11 @@ import static org.junit.Assert.*;
  *
  * @author aliyou
  */
-public class IndexManagerTest {
+public class IndexManager1Test {
 
 //    static Path rootDir;
 //
-//    public IndexManagerTest() {
+//    public IndexManager1Test() {
 //        rootDir = Paths.get("/tmp/mahjong", "dao");
 //    }
 //
@@ -79,7 +78,7 @@ public class IndexManagerTest {
 //            assertEquals(null, result);
 //
 //        } catch (IOException ex) {
-//            Logger.getLogger(IndexManagerTest.class.getName()).log(Level.SEVERE, null, ex);
+//            Logger.getLogger(IndexManager1Test.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 //    }
 //
@@ -101,7 +100,7 @@ public class IndexManagerTest {
 //            assertEquals(expResult, result);
 ////            System.out.print( indexFilePath.toFile().delete() ? "[OK] " : "[NOK] ");
 //        } catch (IOException ex) {
-//            Logger.getLogger(IndexManagerTest.class.getName()).log(Level.SEVERE, null, ex);
+//            Logger.getLogger(IndexManager1Test.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 //    }
 //
@@ -125,7 +124,7 @@ public class IndexManagerTest {
 //            Index expResult = indexRow != null ? instance.getRow(dataID).getData() : null;
 //            assertEquals(expResult, null);
 //        } catch (IOException | InterruptedException ex) {
-//            Logger.getLogger(IndexManagerTest.class.getName()).log(Level.SEVERE, null, ex);
+//            Logger.getLogger(IndexManager1Test.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 //    }
 //

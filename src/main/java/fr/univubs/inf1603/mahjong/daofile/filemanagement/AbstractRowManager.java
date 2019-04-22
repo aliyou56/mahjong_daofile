@@ -1,0 +1,380 @@
+package fr.univubs.inf1603.mahjong.daofile.filemanagement;
+
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
+import fr.univubs.inf1603.mahjong.engine.persistence.UniqueIdentifiable;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Cette classe gère un ensemble de tuples encapulant soit un index
+ * {@link Index} ou un lien {@link LinkRow.Link}. A l'instanciation
+ * tous les tuples sont chargés en mémoire dans 2 listes triées (la première
+ * suivant le pointeur de tuple et la seconde suivant l'identifiant
+ * <code>UUID</code> des objets <code>T</code> encapsulés dans les tuples). Lors
+ * de l'ajout d'un nouvel element, sa position dans la seconde liste est
+ * déterminée et il est inséré à cette posiiton. Cela permet de 4 maintenir en
+ * permanence cette liste triée. Ainsi un élement est retrtouvé à l'aide de
+ * l'algorithme de recherche dichotomique (O(log(n))). Après la suppression d'un
+ * tuple, le pointeur des tuples qui suivent est mis à jour.
+ *
+ * @author aliyou, nesrine
+ * @version 1.1.0
+ * @param <T> Tuple
+ */
+public abstract class AbstractRowManager<T extends AbstractRow> {
+
+    /**
+     * Logging
+     */
+    private final static Logger LOGGER = Logger.getLogger(AbstractRowManager.class.getName());
+    /**
+     * Fichier.
+     */
+    private final RandomAccessFile rowFile;
+    /**
+     * Tuple encapsulant l'en-tete d'un fichier.
+     */
+    private final FileHeaderRow fhr;
+    /**
+     * Taille d'un tuple <code>T</code>.
+     */
+    protected final int rowSize;
+    /**
+     * Liste des tuples <code>T</code> triée suivant le pointeur de tuple.
+     */
+    protected final List<T> rowsSortedByPointer;
+    /**
+     * Liste des tuples <code>T</code> triée suivant l'identifiant de l'objet
+     * <code>T</code> encapsulé.
+     */
+    private final List<T> rowsSortedByUUID;
+    /**
+     * Processus qui écrit dans le fichier.
+     */
+    protected final DAOFileWriter rowWriter;
+
+    /**
+     * Constructeur avec le chemin d'accès d'un fichier <code>rowFilePath</code>
+     * et la taille d'un tuple <code>T</code>.
+     *
+     * @param rowFilePath Chemin d'accès d'un fichier.
+     * @param rowSize Taille d'un tuple <code>T</code>.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
+     */
+    protected AbstractRowManager(Path rowFilePath, int rowSize) throws DAOFileException {
+        try {
+            this.rowsSortedByPointer = new ArrayList<>();
+            this.rowsSortedByUUID = new ArrayList<>();
+            this.rowFile = new RandomAccessFile(rowFilePath.toFile(), "rw");
+            this.rowWriter = new DAOFileWriter(rowFile.getChannel());
+            this.fhr = rowWriter.loadFileHeader();
+            this.rowSize = rowSize;
+            loadAllRow();
+            System.out.print(fhr.getData());
+        } catch (IOException ex) {
+            throw new DAOFileException("IO error : " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Renvoie la liste de tuples encapsulant les objets de la liste
+     * {@code dataList}
+     *
+     * @param dataList Liste des objets Persistables.
+     * @return Liste des tuples contenant les objets de la liste
+     * {@code dataList}.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * s'il y'a une erreur lors de l'ajout d'un tuple à la liste.
+     */
+    public List<T> getRowList(List<? extends Persistable> dataList) throws DAOFileException {
+//        FileDAOUtilities.checkNotNull("dataListToDelete", dataListToDelete);
+        if (!dataList.isEmpty()) {
+            List<T> rowList = new ArrayList<>();
+            for (Persistable data : dataList) {
+                AbstractRow row = getRow(data.getUUID());
+                RowUtilities.addRowToSortedListByPointer((List<AbstractRow>) rowList, row);
+            };
+            return rowList;
+        }
+        return null;
+    }
+
+    /**
+     * Renvoie une liste de tuples qui ne peuvent pas etre écrits d'un seul
+     * coup. La différence entre les pointeur de tuple de ces tuples et les
+     * tuples voisins sont différentes de la taille d'un tuple de meme type.
+     *
+     * @param rowsSorteByPointer Liste de tuples.
+     * @return Liste de tuples qui peuvent pas etre écrit d'un seul coup.
+     */
+    public List<T> getSingleRemoveList(List<T> rowsSorteByPointer) {
+        List<T> singleRemoveList = new ArrayList<>();
+        AbstractRow firstRow = rowsSorteByPointer.get(0);
+        long offset = firstRow.getRowPointer() + firstRow.getRowSize();
+        for (T row : rowsSorteByPointer) {
+            if (offset - row.getRowPointer() != firstRow.getRowSize()) {
+                singleRemoveList.add(row);
+            }
+            offset += firstRow.getRowSize();
+        }
+        singleRemoveList.forEach(r -> {
+            rowsSorteByPointer.remove(r);
+        });
+        return singleRemoveList;
+    }
+
+    /**
+     * Charge l'ensemble des tuples <code>T</code> en mémoire.
+     *
+     * @return Nombre de tuples chargés
+     * @throws DAOFileException s'il y'a une erreur lors du chargement.
+     */
+    private int loadAllRow() throws DAOFileException {
+        try {
+            int _nbRecords = 0;
+            if (rowFile.length() != 0) {
+                long rowPointer = FileHeaderRow.FILE_HEADER_ROW_SIZE;
+                int lenght = 100 * rowSize;
+                ByteBuffer buffer;
+                while ((buffer = rowWriter.read(rowPointer, lenght)) != null) {
+                    while (buffer.hasRemaining()) {
+                        T row = createRow(buffer, rowPointer);
+                        if (row != null) {
+                            addRowToList(row);
+                            _nbRecords++;
+                            rowPointer += this.rowSize;
+                            LOGGER.log(Level.FINE, "[OK] row loaded : {0}", row);
+                        }
+                    }
+                }
+            }
+            LOGGER.log(Level.FINE, "{0} tuples charg\u00e9s.", _nbRecords);
+            return _nbRecords;
+        } catch (IOException ex) {
+            throw new DAOFileException("IO error : " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Lis un tuple <code>T</code> à partir d'un tampon d'octet.
+     *
+     * @param buffer Tampon d'octet.
+     * @param rowPointer Pointeur de tuple.
+     * @return Le tuple <code>T</code> lu.
+     * @throws DAOFileException S'il y'a une erreur lors de la création d'un
+     * tuple <code>T</code>.
+     */
+    protected abstract T createRow(ByteBuffer buffer, long rowPointer) throws DAOFileException;
+
+    /**
+     * Renvoie un tuple <code>T</code> lu à partir d'un fichier.
+     *
+     * @param writer Wrtier du fichier.
+     * @param rowPointer Pointeur de tuple.
+     * @return Le tuple <code>T</code> lu.
+     * @throws DAOFileException S'il y'a une erreur lors de la création d'un
+     * tuple <code>T</code>.
+     */
+    protected abstract T createRow(DAOFileWriter writer, long rowPointer) throws DAOFileException;
+
+    /**
+     * Mets un tuple <code>T</code> dans la liste d'attente du processus qui
+     * écrit dans le fichier et l'ajoute aux listes des tuples.
+     *
+     * @param newRow Tuple <code>T</code> à rajouter.
+     * @return {@code true} si le tuple a été ajouté sinon {@code false}.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * s'il y'a une erreur lors de l'ajout d'un tuple.
+     */
+    protected boolean addRow(T newRow) throws DAOFileException {
+        if (addRowToList(newRow)) {
+            rowWriter.addRowToMultipleWritingList(newRow);
+            fhr.getData().incrementRowNumber();
+            LOGGER.log(Level.FINE, "[OK] newRow added : {0}", newRow);
+            return true;
+        }
+        LOGGER.log(Level.FINE, "[NOK] newRow did not added : {0}", newRow);
+        return false;
+    }
+
+    /**
+     * Supprime un tuple <code>T</code> d'un fichier à l'aide de l'identifiant
+     * de l'objet encapsulé.
+     *
+     * @param dataID Identifiant de l'objet encapsulé dans un tuple
+     * <code>T</code>.
+     * @return Le tuple <code>T</code> supprimé.
+     * @throws DAOFileException s'il y'a une erreur lors de la suppression du
+     * tuple.
+     */
+    protected T removeRow(UUID dataID) throws DAOFileException {
+        T row = getRow(dataID);
+        return removeRow(row) ? row : null;
+    }
+
+    /**
+     * Supprime un tuple <code>T</code> d'un fichier.
+     *
+     * @param row Tuple <code>T</code> à supprimer.
+     * @return <code>true</code> si le tuple est supprimé sinon
+     * <code>false</code>
+     * @throws DAOFileException s'il y'a une erreur lors de la suppression.
+     */
+    protected boolean removeRow(T row) throws DAOFileException {
+        if (row != null) {
+            try {
+                int pointer = (int) row.getRowPointer();
+                T realRow = createRow(rowWriter, row.getRowPointer());
+                LOGGER.log(Level.FINE, "[INFO] row to delete : {0}", row);
+                LOGGER.log(Level.FINE, "[INFO] real row at the position in the file : {0}", realRow.getData());
+                if (((UniqueIdentifiable) realRow.getData()).getUUID().compareTo(((UniqueIdentifiable) row.getData()).getUUID()) == 0) {
+                    removeRowFromRowsList(row);
+                    updateRowsPointer(pointer, rowSize);
+                    LOGGER.log(Level.FINE, "[OK] row removed : {0}", row);
+                    return rowWriter.deleteFromFile(pointer, rowSize);
+                }
+                LOGGER.log(Level.FINE, "[NOK] row not removed : {0}", row);
+            } catch (IOException ex) {
+                throw new DAOFileException("IO Error : " + ex.getMessage());
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Ajoute un tuple aux listes de tuples {@code rowsSortedByPointer} et
+     * {@code rowsSortedByUUID} s'il n'existe pas déjà dans les listes.
+     *
+     * @param row Tuple à ajouter.
+     * @return {@code true} si le tuple a été ajouté sinon {@code false}.
+     */
+    private boolean addRowToList(AbstractRow row) throws DAOFileException {
+        UUID dataID = ((UniqueIdentifiable) row.getData()).getUUID();
+        if (getRow(dataID) == null) {
+            RowUtilities.addRowToSortedListByPointer((List<AbstractRow>) rowsSortedByPointer, row);
+            RowUtilities.addRowToSortedListByUUID((List<AbstractRow>) rowsSortedByUUID, row);
+            row.addPropertyChangeListener(rowWriter);
+            LOGGER.log(Level.FINE, "[OK] row added to lists : {0}", row);
+            return true;
+        }
+        LOGGER.log(Level.FINE, "[NOK] row not added to lists : {0}", row);
+        return false;
+    }
+
+    /**
+     * Mets à jour les pointeurs de tuple des tuples à partir de la position
+     * <code>position</code> dans la liste ordonnée suivant le pointeur de tuple
+     * <code>rowsSortedByPointer</code> en enlevant l'offset <code>offset</code>
+     * donné en paramètre.
+     *
+     * @param posisiton Position à partir de laquelle la mise à jour est
+     * commencée.
+     * @param offset L'offset à enlever des pointeurs de tuple.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * s'il y'a une erreur lors de la mis à jour des pointeurs de tuple
+     */
+    protected void updateRowsPointer(long posisiton, int offset) throws DAOFileException {
+        RowUtilities.updateRowsPointer((List<AbstractRow>) rowsSortedByPointer, posisiton, offset);
+    }
+
+    /**
+     * Mets le pointeur d'un tuple <code>T</code> à <code>-1</code> pour éviter
+     * qu'il soit écrit dans le fichier s'il est dans la liste d'attente du
+     * processus qui écrit dans le fichier. Supprime les écoutes et retire le
+     * tuple des listes de tuples. Et enfin décremente le nombre total de tuples
+     * dans le fichier.
+     *
+     * @param row Tuple à retirer.
+     */
+    protected void removeRowFromRowsList(T row) {
+        row.setRowPointer(-1, false);
+        row.getData().removePropertyChangeListener(row);
+        row.removePropertyChangeListener(rowWriter);
+        rowsSortedByPointer.remove(row);
+        rowsSortedByUUID.remove(row);
+        fhr.getData().decrementRowNumber();
+        LOGGER.log(Level.FINE, "[OK] row removed from the list -> new rowNumber={0} \n\t", new Object[]{getRowNumber(), row});
+    }
+
+    /**
+     * Rétourne un tuple <code>T</code> s'il existe dans la liste des tuples
+     * {@code rowsSortedByUUID} ordonnée suivant l'identifiant {@code UUID} de
+     * l'objet encapsulé sinon <code>null</code>. La recherche du tuple est
+     * basée sur l'algorithme de recherche dichotomique.
+     *
+     * @param dataID Identifiant de l'objet encapsulé dans le tuple.
+     * @return Tuple <code>T</code> s'il existe dans la liste des tuples sinon
+     * <code>null</code>.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * s'il y'a une erreur lors de récupération de la position du tuple de
+     * l'objet dont l'identifiant est {@code dataID}.
+     */
+    public T getRow(UUID dataID) throws DAOFileException {
+        int position = RowUtilities.getRowPositionFromSortedListByUUID((List<AbstractRow>) rowsSortedByUUID, dataID);
+        if (rowsSortedByUUID.size() > 0) {
+            T row = rowsSortedByUUID.get(position);
+            UniqueIdentifiable data = (UniqueIdentifiable) row.getData();
+            if (data.getUUID().compareTo(dataID) == 0) {
+                LOGGER.log(Level.FINE, "[OK] row founded in the list : {0}", row);
+                return row;
+            }
+        }
+        LOGGER.log(Level.FINE, "[NOK] row not founded in the list : id={0}", dataID);
+        return null;
+    }
+
+    /**
+     * Rétourne le nombre total de tuples dans un fichier.
+     *
+     * @return Nombre total de tuples dans un fichier.
+     */
+    int getRowNumber() {
+        return this.fhr.getData().getRowNumber();
+    }
+
+    /**
+     * Renvoie le prochain identifiant de tuple.
+     *
+     * @return Prochain identifiant de tuple.
+     */
+    int getNextRowID() {
+        return this.fhr.getData().getNextRowID();
+    }
+
+    /**
+     * Renvoie le prochain pointeur de tuple.
+     *
+     * @return Prochain pointeur de tuple.
+     */
+    protected long getNextRowPointer() {
+        return FileHeaderRow.FILE_HEADER_ROW_SIZE + (getRowNumber() * this.rowSize);
+    }
+
+    /**
+     * Renvoie la liste des tuples <code>T</code> suivant le pointeur de tuple.
+     *
+     * @return Liste des tuples <code>T</code> suivant le pointeur de tuple.
+     */
+    protected List<T> getRowsSortedByRowPointer() {
+        return rowsSortedByPointer;
+    }
+
+    /**
+     * Rétourne la liste des tuples <code>T</code> triée suivant l'identifiant
+     * de l'objet <code>T</code> encapsulé.
+     *
+     * @return Liste des tuples <code>T</code> triée suivant l'identifiant de
+     * l'objet <code>T</code> encapsulé.
+     */
+    public List<T> getRowsSortedByUUID() {
+        return rowsSortedByUUID;
+    }
+}

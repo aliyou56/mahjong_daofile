@@ -1,12 +1,16 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.LinkManagerFactory;
 import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
 import fr.univubs.inf1603.mahjong.engine.game.GameTile;
 import fr.univubs.inf1603.mahjong.engine.game.TileZone;
+import fr.univubs.inf1603.mahjong.sapi.Player;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import fr.univubs.inf1603.mahjong.dao.SimpleGameDAO;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 
 /**
  * La classe <code>FileDAOManager</code> est une implémentation du
@@ -16,7 +20,7 @@ import java.nio.file.Paths;
  * répertoire racine <code>Path</code> comme paramètre.
  *
  * @author aliyou, nesrine
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class FileDAOManager implements DAOManager {
 
@@ -29,15 +33,17 @@ public class FileDAOManager implements DAOManager {
      */
     private final Path rootDir;
 
+    private static FileSimpleGameDAO simpleGameDao = null;
+    private static FilePlayerDAO playerDao = null;
     private static FileGameDAO gameDao = null;
     private static FileZoneDAO zoneDao = null;
     private static FileTileDAO tileDao = null;
-//    private static FilePlayerDAO playereDao;
 
     private static LinkManagerFactory linkManagerFactory = null;
-    
+
     /**
-     * Constructeur privé avec le chemin d'accès du repertoire racine.
+     * Constructeur privé avec le chemin d'accès du repertoire racine
+     * {@code rootDir}.
      *
      * @param rootDir Chemin d'accès du repertoire racine.
      */
@@ -47,8 +53,14 @@ public class FileDAOManager implements DAOManager {
 
     /**
      * Rétourne l'instance du gestionnaire des DAO.
+     * <br>
+     * Si c'est le premier accès au {@code FileDAOManager} via cette méthode
+     * statique {@code getInstance()} les fichiers sont enregistré dans un
+     * répertoire {@code Mahjong} situé dans le répertoire de l'utilisateur
+     * courant {@code user.home}.
+     * <br>
      *
-     * @return L'instance du <code>DAOManager</code>
+     * @return L'instance du <code>DAOManager</code>.
      */
     synchronized public static DAOManager getInstance() {
         return getInstance(Paths.get(System.getProperty("user.home"), "MahJong"));
@@ -56,6 +68,11 @@ public class FileDAOManager implements DAOManager {
 
     /**
      * Rétourne l'instance du gestionnaire des DAO.
+     * <br>
+     * Si c'est le premier accès au {@code FileDAOManager} via cette méthode
+     * statique {@code getInstance(Path rootDir)} les fichiers sont enregistré
+     * dans le répertoire {@code rootDir}.
+     * <br>
      *
      * @param rootDir Chemin d'accès du repertoire racine.
      * @return L'instance du <code>DAOManager</code>.
@@ -69,6 +86,50 @@ public class FileDAOManager implements DAOManager {
     }
 
     /**
+     * Rétourne l'instance du DAO fichier qui gère les simple games
+     * <code>SimpleGame</code>.
+     *
+     * @return l'instance du DAO fichier qui gère les joueurs
+     * <code>SimpleGame</code>.
+     * @throws DAOException s'il y'a une erreur lors de l'instanciation de
+     * {<code>FileSimpleGameDAO</code>.
+     */
+    @Override
+    synchronized public SimpleGameDAO getSimpleGameDao() throws DAOException {
+        if (simpleGameDao == null) {
+            try {
+                simpleGameDao = new FileSimpleGameDAO(rootDir, getGameDao());
+                simpleGameDao.setLinkManager(linkManagerFactory.getPlayerToSimpleGameLinkManager());
+            } catch (DAOFileException ex) {
+                throw new DAOException(ex.getMessage(), ex);
+            }
+        }
+        return simpleGameDao;
+    }
+
+    /**
+     * Rétourne l'instance du DAO fichier qui gère les joueurs
+     * <code>Player</code>.
+     *
+     * @return l'instance du DAO fichier qui gère les joueurs
+     * <code>Player</code>.
+     * @throws DAOException s'il y'a une erreur lors de l'instanciation de
+     * {@code FilePlayerDAO}.
+     */
+    @Override
+    synchronized public DAO<Player> getPlayerDao() throws DAOException {
+        if (playerDao == null) {
+            try {
+                playerDao = new FilePlayerDAO(rootDir);
+                playerDao.setLinkManager(linkManagerFactory.getPlayerToSimpleGameLinkManager());
+            } catch (DAOFileException ex) {
+                throw new DAOException(ex.getMessage(), ex);
+            }
+        }
+        return playerDao;
+    }
+
+    /**
      * Rétourne l'instance du DAO fichier qui gère les parties
      * <code>Game</code>.
      *
@@ -78,10 +139,13 @@ public class FileDAOManager implements DAOManager {
      */
     @Override
     synchronized public DAO getGameDao() throws DAOException {
-        if(gameDao == null) {
-            gameDao = new FileGameDAO(rootDir);
-            gameDao.setZoneToGameLinkManager(linkManagerFactory.getZoneToGameLinkManager());
-//            gameDao.setPlayerToGameLinkManager(linkManagerFactory.getPlayerToGameLinkManager());
+        if (gameDao == null) {
+            try {
+                gameDao = new FileGameDAO(rootDir);
+                gameDao.setLinkManager(linkManagerFactory.getZoneToGameLinkManager());
+            } catch (DAOFileException ex) {
+                throw new DAOException(ex.getMessage(), ex);
+            }
         }
         return gameDao;
     }
@@ -96,8 +160,13 @@ public class FileDAOManager implements DAOManager {
     @Override
     synchronized public DAO<TileZone> getZoneDao() throws DAOException {
         if (zoneDao == null) {
-            zoneDao = new FileZoneDAO(rootDir);
-            zoneDao.setTileToZoneLinkManager(linkManagerFactory.getTileToZoneLinkManager());
+            try {
+                zoneDao = new FileZoneDAO(rootDir);
+                zoneDao.setZoneLinkManager(linkManagerFactory.getZoneToGameLinkManager());
+                zoneDao.setTileLinkManager(linkManagerFactory.getTileToZoneLinkManager());
+            } catch (DAOFileException ex) {
+                throw new DAOException(ex.getMessage(), ex);
+            }
         }
         return zoneDao;
     }
@@ -113,24 +182,14 @@ public class FileDAOManager implements DAOManager {
      */
     @Override
     synchronized public DAO<GameTile> getTileDao() throws DAOException {
-        if(tileDao == null) {
-            tileDao = new FileTileDAO(rootDir);
-            tileDao.setTileToZoneLinkManager(linkManagerFactory.getTileToZoneLinkManager());
+        if (tileDao == null) {
+            try {
+                tileDao = new FileTileDAO(rootDir);
+                tileDao.setLinkManager(linkManagerFactory.getTileToZoneLinkManager());
+            } catch (DAOFileException ex) {
+                throw new DAOException(ex.getMessage(), ex);
+            }
         }
         return tileDao;
     }
-    
-    /**
-     * Rétourne l'instance du DAO fichier qui gère les joueurs
-     * <code>Player</code>.
-     *
-     * @return l'instance du DAO fichier qui gère les joueurs
-     * <code>Player</code>.
-     * @throws DAOException s'il y'a une erreur lors de l'instanciation de
-     * {<code>FilePlayerDAO</code>.
-     */
-//    @Override
-//    public DAO<Player> getPlayerDao() throws DAOException {
-//        return null;
-//    }
 }

@@ -6,14 +6,13 @@ import fr.univubs.inf1603.mahjong.engine.game.TileZone;
 import fr.univubs.inf1603.mahjong.engine.game.TileZoneIdentifier;
 import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 /**
  *
  * @author aliyou
  */
-public class MahjongTileZone implements TileZone{
+public class MahjongTileZone implements TileZone {
 
     private final UUID uuid;
     private ArrayList<GameTile> tiles;

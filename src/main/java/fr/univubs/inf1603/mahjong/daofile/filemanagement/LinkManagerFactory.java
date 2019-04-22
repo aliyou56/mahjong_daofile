@@ -1,15 +1,19 @@
-package fr.univubs.inf1603.mahjong.daofile;
+package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
+import fr.univubs.inf1603.mahjong.daofile.FileDAOManager;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.engine.game.GameTile;
 import fr.univubs.inf1603.mahjong.engine.game.TileZone;
 import java.nio.file.Path;
 
 /**
- *
+ * Cette classe est une fabrique pour les gestionnaires de liens entre des objets
+ * parents et objets enfants.
+ * 
  * @author aliyou, nesrine
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class LinkManagerFactory {
 
@@ -33,7 +37,7 @@ public class LinkManagerFactory {
     /**
      * Gestionnaire de liens entre les joueurs et les parties.
      */
-//    private static LinkManager<Player> playerToGameLinkManager = null;
+    private static PlayerToSimpleGameLinkManager playerToSimpleGameLinkManager = null;
 
     /**
      * Chemin d'accès du repertoire racine.
@@ -67,13 +71,17 @@ public class LinkManagerFactory {
      * Rétourne le gestionnaire de lien Tuile - Zone.
      *
      * @return Gestionnaire de lien Tuile - Zone.
-     * @throws DAOException s'il y'a une erreur lors de l'instanciation du
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation du
      * gestionnaire de lien.
      */
-    synchronized public LinkManager<GameTile> getTileToZoneLinkManager() throws DAOException {
+    synchronized public LinkManager<GameTile> getTileToZoneLinkManager() throws DAOFileException {
         if (tileToZoneLinkManager == null) {
             tileToZoneLinkManager = new LinkManager(rootDir.resolve("tileToZone.link"));
-            tileToZoneLinkManager.setDAO(daoManager.getTileDao());
+            try {
+                tileToZoneLinkManager.setDAO(daoManager.getTileDao());
+            } catch (DAOException ex) {
+                throw new DAOFileException(ex.getMessage(), ex);
+            }
         }
         return tileToZoneLinkManager;
     }
@@ -82,29 +90,33 @@ public class LinkManagerFactory {
      * Rétourne le gestionnaire de lien Zone - Game.
      *
      * @return Gestionnaire de lien Zone - Game.
-     * @throws DAOException s'il y'a une erreur lors de l'instanciation du
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation du
      * gestionnaire de lien.
      */
-    synchronized public LinkManager<TileZone> getZoneToGameLinkManager() throws DAOException {
+    synchronized public LinkManager<TileZone> getZoneToGameLinkManager() throws DAOFileException {
         if(zoneToGameLinkManager == null) {
             zoneToGameLinkManager = new LinkManager(rootDir.resolve("zoneToGame.link"));
-            zoneToGameLinkManager.setDAO(daoManager.getZoneDao());
+            try {
+                zoneToGameLinkManager.setDAO(daoManager.getZoneDao());
+            } catch (DAOException ex) {
+                throw new DAOFileException(ex.getMessage(), ex);
+            }
         }
         return zoneToGameLinkManager;
     }
     
     /**
-     * Rétourne le gestionnaire de lien Player - Game.
+     * Rétourne le gestionnaire de lien Player - SimpleGame.
      *
-     * @return Gestionnaire de lien Player - Game.
-     * @throws DAOException s'il y'a une erreur lors de l'instanciation du
+     * @return Gestionnaire de lien Player - SimpleGame.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation du
      * gestionnaire de lien.
      */
-//    synchronized public LinkManager<TileZone> getPlayerToGameLinkManager() throws DAOException {
-//        if(playerToGameLinkManager == null) {
-//            playerToGameLinkManager = new LinkManager(rootDir.resolve("playerToGame.link"));
-//            playerToGameLinkManager.setDAO(daoManager.getPlayerDao());
-//        }
-//        return playerToGameLinkManager;
-//    }
+    synchronized public PlayerToSimpleGameLinkManager getPlayerToSimpleGameLinkManager() throws DAOFileException {
+        if(playerToSimpleGameLinkManager == null) {
+            playerToSimpleGameLinkManager = new PlayerToSimpleGameLinkManager(rootDir.resolve("playerToSimpleGame.link"));
+//            playerToSimpleGameLinkManager.getLinkManager().setDAO(daoManager.getPlayerDao());
+        }
+        return playerToSimpleGameLinkManager;
+    }
 }

@@ -1,4 +1,3 @@
-
 package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.dao.DAO;
@@ -20,7 +19,7 @@ import org.junit.Test;
  * @author aliyou, nesrine
  */
 public class FileZoneDAOTest extends FileDAOMahJongTest<TileZone> {
-    
+
     static DAO<TileZone> zoneDao;
 
     public FileZoneDAOTest() {
@@ -53,23 +52,23 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<TileZone> {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    ArrayList<GameTile> createRandomTiles(int nb, int id) {
+//
+//    ArrayList<GameTile> createRandomTiles(int nb, int id) {
+//        ArrayList<GameTile> tiles = new ArrayList<>();
+//        for (int i = 0; i < nb; i++) {
+//            AbstractTile absTile = new CommonTile(CommonTile.Family.BAMBOO, CommonTile.Number.NINE);
+//            GameTile tile = new GameTile(i + 1, absTile, new UUID(0, id));
+//            tiles.add(tile);
+//            id++;
+//        }
+//        return tiles;
+//    }
+
+    private ArrayList<GameTile> createRandomTiles(int nb) {
         ArrayList<GameTile> tiles = new ArrayList<>();
         for (int i = 0; i < nb; i++) {
             AbstractTile absTile = new CommonTile(CommonTile.Family.BAMBOO, CommonTile.Number.NINE);
-            GameTile tile = new GameTile(i+1, absTile, new UUID(0, id));
-            tiles.add(tile);
-            id++;
-        }
-        return tiles;
-    }
-    
-    ArrayList<GameTile> createRandomTiles(int nb) {
-        ArrayList<GameTile> tiles = new ArrayList<>();
-        for (int i = 0; i < nb; i++) {
-            AbstractTile absTile = new CommonTile(CommonTile.Family.BAMBOO, CommonTile.Number.NINE);
-            GameTile tile = new GameTile(i+1, absTile, UUID.randomUUID());
+            GameTile tile = new GameTile(i + 1, absTile, UUID.randomUUID());
             tiles.add(tile);
         }
         return tiles;
@@ -86,12 +85,9 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<TileZone> {
             super.testDelete(zoneDao, new UUID(0, 10));
             super.testDelete(zoneDao, new UUID(0, 14));
             super.testDelete(zoneDao, new UUID(0, 12));
-//            for(TileZone gt : zoneDao.findAll()) {
-//                System.err.println(gt.getUUID());
-//            }
             Thread.sleep(6000);
-        } catch (/*DAOException | */InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }
-    } 
+    }
 }

@@ -1,7 +1,6 @@
-package fr.univubs.inf1603.mahjong.daofile;
+package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.dao.DAOException;
-import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -33,7 +32,7 @@ import java.util.logging.Logger;
  *
  * @see AbstractRowManager
  * @author aliyou, nesrine
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class IndexManager extends AbstractRowManager<IndexRow> {
 
@@ -52,10 +51,9 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      *
      * @param indexFilePath Chemin d'accès du fichier d'index
      * @param dataRowSize Taille d'un tuple de données.
-     * @throws IOException s'il y'a une erreur d'entrée sortie lors de
-     * l'instanciation.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
      */
-    IndexManager(Path indexFilePath, int dataRowSize) throws DAOException {
+    public IndexManager(Path indexFilePath, int dataRowSize) throws DAOFileException {
         super(indexFilePath, IndexRow.INDEX_ROW_SIZE);
         System.out.println(" -> IndexManager [dataRowSize=" + dataRowSize + "]");
         this.dataRowSize = dataRowSize;
@@ -65,21 +63,29 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      * {@inheritDoc}
      */
     @Override
-    protected IndexRow createRow(ByteBuffer buffer, long rowPointer) throws DAOException {
+    protected IndexRow createRow(ByteBuffer buffer, long rowPointer) throws DAOFileException {
         return new IndexRow(buffer, rowPointer);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected IndexRow createRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
+        return new IndexRow(writer, rowPointer);
     }
 
     /**
      * Ajoute un Index à la liste des index.
      *
-     * @see AbstractRowManager.addRow
-     *
      * @param index Index à rajouter.
-     * @throws IOException s'il y'a une erreur d'entrée sortie lors de l'ajout.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException s'il y'a une erreur lors de la création du tuple d'index.
      */
-    void addIndex(Index index) throws IOException {
+    public void addIndex(Index index) throws DAOFileException {
         IndexRow newIndexRow = new IndexRow(getNextRowID(), index, super.getNextRowPointer());
-        super.addRow(newIndexRow);
+        if(!super.addRow(newIndexRow)) {
+            System.err.println("index not added : " +index);
+        }
     }
 
     /**
@@ -89,9 +95,10 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      * d'index à retirer.
      *
      * @param dataID Identifiant de l'index du tuple d'index à supprimer.
-     * @throws IOException s'il y'a une erreur lors de la suppression.
+     * @return L'index supprimé.
+     * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    Index removeIndex(UUID dataID) throws IOException, DAOException {
+    public Index removeIndex(UUID dataID) throws DAOFileException {
         IndexRow indexRowToDelete = super.getRow(dataID);
         LOGGER.log(Level.FINE, "[OK] index deleted -> dataID = {0}, rowSize = {1}, rowNumber = {2}",
                 new Object[]{indexRowToDelete.getData().getUUID(), rowSize, getRowNumber()});
@@ -104,9 +111,10 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      * pointeurs de données qui suivent le tuple d'index à retirer.
      *
      * @param indexRowToDelete Tuple d'index à supprimer.
-     * @throws IOException s'il y'a une erreur lors de la suppression.
+     * @return L'index supprimé
+     * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    Index removeIndex(IndexRow indexRowToDelete) throws IOException, DAOException {
+    public Index removeIndex(IndexRow indexRowToDelete) throws DAOFileException {
         if (indexRowToDelete != null) {
             long pointer = indexRowToDelete.getRowPointer();
             long dataPointer = indexRowToDelete.getData().getPointer();
@@ -126,20 +134,24 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      * pointeurs de données qui suivent le dernier tuple d'index de la liste.
      *
      * @param indexRowsSortedByPointerToDelete Liste des tuples d'index à supprimer.
-     * @throws IOException s'il y'a une erreur lors de la suppression.
+     * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    void removeIndex(List<IndexRow> indexRowsSortedByPointerToDelete) throws IOException { 
+    public void removeIndex(List<IndexRow> indexRowsSortedByPointerToDelete) throws DAOFileException { 
         if (!indexRowsSortedByPointerToDelete.isEmpty()) {
-            IndexRow firstIndexRow = indexRowsSortedByPointerToDelete.get(0);
-            long startPointer = firstIndexRow.getRowPointer();
-            long dataPointer = firstIndexRow.getData().getPointer();
-            indexRowsSortedByPointerToDelete.forEach((indexRow) -> {
-                super.removeRowFromRowsList(indexRow);
-            });
-            updateDataRowsPointer(startPointer, dataPointer, indexRowsSortedByPointerToDelete.size() * this.dataRowSize);
-            int offset = indexRowsSortedByPointerToDelete.size() * super.rowSize;
-            if (rowWriter.deleteFromFile((int) startPointer, offset)) {
-                super.updateRowsPointer(startPointer, offset);
+            try {
+                IndexRow firstIndexRow = indexRowsSortedByPointerToDelete.get(0);
+                long startPointer = firstIndexRow.getRowPointer();
+                long dataPointer = firstIndexRow.getData().getPointer();
+                indexRowsSortedByPointerToDelete.forEach((indexRow) -> {
+                    super.removeRowFromRowsList(indexRow);
+                });
+                updateDataRowsPointer(startPointer, dataPointer, indexRowsSortedByPointerToDelete.size() * this.dataRowSize);
+                int offset = indexRowsSortedByPointerToDelete.size() * super.rowSize;
+                if (rowWriter.deleteFromFile((int) startPointer, offset)) {
+                    super.updateRowsPointer(startPointer, offset);
+                }
+            } catch (IOException ex) {
+                throw new DAOFileException(ex.getMessage(), ex);
             }
         }
     }
@@ -151,11 +163,12 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      * @param pointer Position du tuple d'index à partir de laquelle la mise à
      * jour est commencée.
      * @param offset L'offset à enlever aux pointeurs de données.
+     * @throws DAOFileException s'il y'a une erreur lors de la mis à jour des pointeurs des tuples de données.
      */
-    private void updateDataRowsPointer(long pointer, long dataPointer, int offset) {
+    private void updateDataRowsPointer(long pointer, long dataPointer, int offset) throws DAOFileException {
         int position = RowUtilities.getRowPositionFormSortedListByPointer(getRowsSortedByRowPointer(), pointer); 
         
-        System.out.println("\n++ IndexManager.updateDataRowsPointer : "
+        System.out.println("++ IndexManager.updateDataRowsPointer : "
                 + "\n\t pointer  : " + pointer
                 + "\n\t offset   : " + offset
                 + "\n\t listSize : " + getRowsSortedByRowPointer().size()
@@ -166,13 +179,12 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
             getRowsSortedByRowPointer().forEach((ar) -> {
                 System.out.print(ar.getData().getPointer() + ", ");
             });
+            System.out.println("");
             
             IndexRow indexRowAtPosition = getRowsSortedByRowPointer().get(position);
             if (indexRowAtPosition.getData().getPointer() < dataPointer) {
                 position += 1;
                 System.out.println("\n\t position : " + position);
-            }else {
-                System.out.println("");
             }
             for (int i = position; i < getRowsSortedByRowPointer().size(); i++) {
                 Index nextIndex = (Index) getRowsSortedByRowPointer().get(i).getData();
@@ -189,27 +201,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
             getRowsSortedByRowPointer().forEach((ar) -> {
                 System.out.print(ar.getData().getPointer() + ", ");
             });
+            System.out.println("");
         }
-        System.out.println("\n");
     }
-
-    /**
-     * Recherche le pointer d'un objet à l'aide de son identifiant
-     * <code>UUID</code> par une recherche dichotomique. Cette méthode cherche
-     * dans la liste des index s'il y'a une entrée qui correspond à
-     * l'identifiant donné. Si l'index est retrouvé, elle retourne le pointeur
-     * de l'objet correspondant à l'identifiant sinon elle retourne
-     * <code>-1</code>.
-     *
-     * @param dataID Identifiant de l'objet à rechercher.
-     * @return Le pointeur de l'objet correspondant à l'identifiant si l'index
-     * est retrouvé sinon <code>-1</code>.
-     */
-//    long getDataRowPointer(UUID dataID) {
-//        IndexRow indexRow = (IndexRow) super.getRow(dataID);
-//        if (indexRow != null) {
-//            return indexRow.getData().getPointer();
-//        }
-//        return -1;
-//    }
 }

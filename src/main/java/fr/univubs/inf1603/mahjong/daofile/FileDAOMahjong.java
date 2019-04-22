@@ -1,15 +1,20 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.FileHeaderRow;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.IndexRow;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.IndexManager;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.RowUtilities;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.AbstractRow;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.DAOFileWriter;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOMahjong;
 import static fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities.checkNotNull;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
-import fr.univubs.inf1603.mahjong.daofile.IndexRow.Index;
-import fr.univubs.inf1603.mahjong.engine.persistence.UniqueIdentifiable;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.Index;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -18,16 +23,17 @@ import java.util.logging.Logger;
 
 /**
  * La classe générique <code>FileDAOMahjong</code> définit la notion de
- * persistance d'un objet <code>T</code> dans un fichier. Un fichier d'index est associé à
- * chaque fichier de données.
+ * persistance d'un objet <code>T</code> dans un fichier. Un fichier d'index est
+ * associé à chaque fichier de données.
  *
- * L'ensemble des tuples des objets <code>T</code> en mémoire sont stockés dans une liste
- * ordonnée suivant le pointeur de tuple <code>dataRowsSortedByPointer</code>.
- * Cela permet de garder une reference sur les tuples ainsi lorsqu'un objet T
- * change il notifie son tuple et ce dernier notifie le processus qui écrit dans 
- * le fichier de données <code>dataWriter</code> et le tuple est mis dans la liste 
- * d'attente pour etre ecrit dans le fichier de données.
- * 
+ * L'ensemble des tuples des objets <code>T</code> en mémoire sont stockés dans
+ * une liste ordonnée suivant le pointeur de tuple
+ * <code>dataRowsSortedByPointer</code>. Cela permet de garder une reference sur
+ * les tuples ainsi lorsqu'un objet T change il notifie son tuple et ce dernier
+ * notifie le processus qui écrit dans le fichier de données
+ * <code>dataWriter</code> et le tuple est mis dans la liste d'attente pour etre
+ * ecrit dans le fichier de données.
+ *
  *
  * <pre>
  * format d'un fichier de données :
@@ -45,7 +51,7 @@ import java.util.logging.Logger;
  * </pre>
  *
  * @author aliyou, nesrine
- * @version 1.0.0
+ * @version 1.1.0
  * @param <T> Objet à persister
  */
 public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T> {
@@ -90,25 +96,27 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
     /**
      * Gère l'ensemble des index associés aux données
      */
-    protected IndexManager indexManager;
-    
+    final protected IndexManager indexManager;
+
     /**
-     * Constructeur avec le chemin d'accès du repertoire racine <code>rootDie</code>,
-     * le nom d'un fichier de données <code>dataFilename</code>, le nom d'un fichier d'inde
+     * Constructeur avec le chemin d'accès du repertoire racine
+     * <code>rootDie</code>, le nom d'un fichier de données
+     * <code>dataFilename</code>, le nom d'un fichier d'inde
      * <code>indexFilename</code> et la taille d'un tuple <code>rowSize</code>.
      *
-     * @param rootDirPath Chemin d'accès du repertoire racine. NE DOIT PAS ETRE NULL.
+     * @param rootDirPath Chemin d'accès du repertoire racine. NE DOIT PAS ETRE
+     * NULL.
      * @param dataFilename Nom du fichier de données. NE DOIT PAS ETRE NULL.
      * @param indexFilename Nom du fichier d'index. NE DOIT PAS ETRE NULL.
      * @param rowSize Taille d'un tuple. DOIT ETRE SUPERIEUR A ZERO (0).
-     * @throws DAOException s'il y'a une erreur lors de l'instanciation.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
      */
-    protected FileDAOMahjong(Path rootDirPath, String dataFilename, String indexFilename, int rowSize) throws DAOException {
+    protected FileDAOMahjong(Path rootDirPath, String dataFilename, String indexFilename, int rowSize) throws DAOFileException {
         checkNotNull("rootDir", rootDirPath);
         checkNotNull("dataFilename", dataFilename);
-        checkNotNull("indexFilename", indexFilename); 
-        if(rowSize < 0) {
-            throw new IllegalArgumentException("rowSize must be greater than zero (0) : " +rowSize);
+        checkNotNull("indexFilename", indexFilename);
+        if (rowSize < 0) {
+            throw new IllegalArgumentException("rowSize must be greater than zero (0) : " + rowSize);
         }
         try {
             if (!rootDirPath.toFile().exists()) {
@@ -126,38 +134,43 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
             this.fhr = dataWriter.loadFileHeader();
             System.out.print(fhr.getData());
         } catch (IOException ioe) {
-            throw new DAOException("Erreur IO : " + ioe.getMessage());
+            throw new DAOFileException("Erreur IO : " + ioe.getMessage());
         }
     }
 
     /**
      * Rétourne un tuple de données encapsulant l'objet <code>T</code>.
+     *
      * @param rowID Identifiant du tuple de données.
      * @param data Objet <code>T</code> à encapsuler dans le tuple.
      * @param pointer Pointeur du tuple.
      * @return Tuple de données.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation du
+     * tuple.
      */
-    protected abstract AbstractRow<T> getDataRow(int rowID, T data, long pointer);
- 
+    protected abstract AbstractRow<T> getDataRow(int rowID, T data, long pointer) throws DAOFileException;
+
     /**
      * Rétourne un tuple encapsulant un objet <code>T</code> lu à partir d'un
      * tampon d'octets <code>buffer</code>.
      *
-     * @param buffer Tampon d'octets.
-     * @param pointer Pointeur du tuple.
+     * @param writer Processus qui éffectue les opérations d'entrée/sortie sur
+     * un fichier.
+     * @param pointer Pointeur d'un tuple.
      * @return Tuple encapsulant un objet <code>T</code> si les données dans le
-     * tampon d'octets sont cohérentes sion <code>null</code>.
-     * @throws DAOException s'il y'a une erreur lors de la lecture d'un tuple depuis le tampon d'octets.
+     * fichier à la position {@code pointer} correspondent bien à un tuple de
+     * {@code T} sion <code>null</code>.
+     * @throws DAOFileException s'il y'a une erreur lors de la lecture du tuple.
      */
-    protected abstract AbstractRow<T> getDataRow(DAOFileWriter writer, long pointer) throws DAOException;
+    protected abstract AbstractRow<T> getDataRow(DAOFileWriter writer, long pointer) throws DAOFileException;
 
     /**
-     * Ajoute un tuple encapsulant l'objet <code>T</code> à la liste des tuples de données
-     * <code>dataRowsSortedByPointer</code>. Ensuite mets le tuple dans la liste
-     * d'attente du processus qui écrit dans le fichier de données. Crée un
-     * nouvel index associé à l'objet<code>T</code> encapsulé dans le tuple via le
-     * gestionnaire d'index. Et incrémente le nombre total de tuple dans le
-     * fichier de données.
+     * Ajoute un tuple encapsulant l'objet <code>T</code> à la liste des tuples
+     * de données <code>dataRowsSortedByPointer</code>. Ensuite mets le tuple
+     * dans la liste d'attente du processus qui écrit dans le fichier de
+     * données. Crée un nouvel index associé à l'objet<code>T</code> encapsulé
+     * dans le tuple via le gestionnaire d'index. Et incrémente le nombre total
+     * de tuple dans le fichier de données.
      *
      * @param data Objet <code>T</code> à persister.
      * @throws DAOException s'il y'a une erreur lors de la sauvegarde.
@@ -169,12 +182,13 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
             RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, row);
             dataWriter.addRowToMultipleWritingList(row);
             row.addPropertyChangeListener(dataWriter);
-            UUID dataID = ((UniqueIdentifiable) row.getData()).getUUID();
-            Index index = new Index(dataID, row.getRowPointer());
-            indexManager.addIndex(index);
+
+//            UUID dataID = ((UniqueIdentifiable) row.getData()).getUUID();
+//            Index index = new Index(dataID, row.getRowPointer());
+//            indexManager.addIndex(index);
             fhr.getData().incrementRowNumber();
-        } catch (IOException ex) {
-            throw new DAOException("Erreur IO : \n" + ex.getMessage());
+        } catch (DAOFileException ex) {
+            throw new DAOException(ex.getMessage(), ex);
         }
     }
 
@@ -184,39 +198,29 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * le fichier sinon <code>null</code>.
      *
      * @param dataID Identifiant de l'objet à charger.
-     * @return Objet <code>T</code> s'il existe dans le fichier sinon <code>null</code>. 
-     * @throws DAOException s'il y'a une erreur lors de la lecture du fichier de données.
+     * @return Objet <code>T</code> s'il existe dans le fichier sinon
+     * <code>null</code>.
+     * @throws DAOException s'il y'a une erreur lors de la lecture du fichier de
+     * données.
      */
     @Override
     final protected T loadFromPersistance(UUID dataID) throws DAOException {
-        IndexRow ir = indexManager.getRow(dataID);
-        if (ir != null) {
-            AbstractRow<T> dataRow = getDataRow(dataWriter, ir.getData().getPointer());
+        try {
+            IndexRow ir = indexManager.getRow(dataID);
+            if (ir != null) {
+                AbstractRow<T> dataRow = getDataRow(dataWriter, ir.getData().getPointer());
 //            if (dataRow != null) {
                 RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
                 dataRow.addPropertyChangeListener(dataWriter);
                 return dataRow.getData();
 //            }
+            }
+        } catch (DAOFileException ex) {
+            throw new DAOException(ex.getMessage(), ex);
         }
-            return null;
-//        try {
-//            long pointer = indexManager.getDataRowPointer(dataID);
-//            if (pointer != -1) {
-//                ByteBuffer buff = dataWriter.read(pointer, rowSize);
-//                if (buff != null) {
-//                    AbstractRow<T> dataRow = getDataRow(buff, pointer);
-//                    if (dataRow != null) {
-//                        RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
-//                        dataRow.addPropertyChangeListener(dataWriter);
-//                        return dataRow.getData();
-//                    }
-//                }
-//            }
-//        } catch (IOException ex) {
-//            throw new DAOException("Erreur IO : \n" + ex.getMessage());
-//        }
+        return null;
     }
- 
+
     /**
      * Rétourne la liste de tous les objets <code>T</code> persistés.
      *
@@ -237,7 +241,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
         dataList = new ArrayList<>(map.values());
         return dataList;
     }
-    
+
     /**
      * Supprime un tuple du fichier de données en tronquant le fichier à la
      * position du tuple plus des éventuels tuples restants.
@@ -245,14 +249,14 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @param dataID Identifiant de l'objet encapsulé dans le tuple à retirer.
      * @return <code>true</code> si le tuple a bien été supprimé sinon
      * <code>false</code>.
-     * @throws DAOException s'il y'a une erreur lors de la suppression.
+     * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    protected final boolean removeDataRow(UUID dataID) throws DAOException {
+    protected final boolean removeDataRow(UUID dataID) throws DAOFileException {
         IndexRow indexRow = (IndexRow) indexManager.getRow(dataID);
         return removeDataRow(indexRow);
     }
-     
-    private boolean removeDataRow(IndexRow indexRow) throws DAOException {
+
+    private boolean removeDataRow(IndexRow indexRow) throws DAOFileException {
         if (indexRow != null) {
             try {
                 Index index = indexRow.getData();
@@ -265,7 +269,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
                     return true;
                 }
             } catch (IOException ex) {
-                throw new DAOException("IO Error : " + ex.getMessage());
+                throw new DAOFileException("IO Error : " + ex.getMessage());
             }
         }
         return false;
@@ -273,11 +277,11 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
 
     /**
      * Supprime un ensemble d'objets <code>T</code> d'un fichier de données.
-     * 
+     *
      * @param dataListToDelete Liste des objets <code>T</code> à supprimer.
-     * @throws DAOOException s'il y'a une erreur lors de la suppression.
+     * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    final void deleteFromPersistance(List<T> dataListToDelete) throws DAOException { //TODO check
+    final public void deleteFromPersistance(List<T> dataListToDelete) throws DAOFileException { //TODO check
         List<IndexRow> multipleRemoveList = indexManager.getRowList(dataListToDelete);
         if (multipleRemoveList != null) {
             List<IndexRow> singleRemoveList = indexManager.getSingleRemoveList(multipleRemoveList);
@@ -287,11 +291,11 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
                 }
             }
             if (!multipleRemoveList.isEmpty()) {
-                multipleRemoveList.forEach(indexRow -> {
+                for (IndexRow indexRow : multipleRemoveList) {
                     AbstractRow dataRow = RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
                     removeRowFromRowsList(dataRow);
                     fhr.getData().decrementRowNumber();
-                });
+                };
                 try {
                     indexManager.removeIndex(multipleRemoveList);
                     long startPointer = multipleRemoveList.get(0).getData().getPointer();
@@ -307,7 +311,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
                         System.out.println("    } ");
                     }
                 } catch (IOException ioe) {
-                    throw new DAOException("IO Error : " + ioe.getMessage());
+                    throw new DAOFileException("IO Error : " + ioe.getMessage());
                 }
             }
         }
@@ -317,8 +321,8 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * Mets le pointeur d'un tuple <code>rowPointer</code> à <code>-1</code>
      * pour éviter que le tuple soit écrit dans le fichier s'il est dans la
      * liste d'attente du processus qui écrit dans le fichier de données
-     * <code>dataWriter</code>. Ensuite supprime les écoutes et rétire le tuple de la
-     * liste des tuples de données <code>dataRowsSortedByPointer</code>.
+     * <code>dataWriter</code>. Ensuite supprime les écoutes et rétire le tuple
+     * de la liste des tuples de données <code>dataRowsSortedByPointer</code>.
      *
      * @param dataRow Tuple à rétirer.
      */
@@ -356,5 +360,5 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      */
     private long getNextRowPointer() {
         return FileHeaderRow.FILE_HEADER_ROW_SIZE + (getRowNumber() * rowSize);
-    } 
+    }
 }
