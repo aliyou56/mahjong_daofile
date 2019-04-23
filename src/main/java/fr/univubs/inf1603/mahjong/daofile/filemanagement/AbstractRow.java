@@ -164,7 +164,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      * @throws DAOException s'il y'a une erreur lors de la lecture.
      */
     void read(ByteBuffer buffer) throws DAOFileException {
-        System.err.println(" AbstractRow.read -> pointer = " + rowPointer);
+//        System.err.println(" AbstractRow.read -> pointer = " + rowPointer);
         FileDAOUtilities.checkNotNull("buffer", buffer);
 //        if (buffer.remaining() >= ROW_HEADER_SIZE - 1) {
         this.rowID = buffer.getInt();

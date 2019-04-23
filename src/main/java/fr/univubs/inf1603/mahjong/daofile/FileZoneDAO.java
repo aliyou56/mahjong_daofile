@@ -127,7 +127,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
         /**
          * Taille minimale d'une zone en octet.
          */
-        private static final int ZONE_MIN_SIZE = 16 + 4 + 4 + 1;           // 25
+        private static final int ZONE_MIN_SIZE = 16 + 4 + (4 + 1);           // 25
         /**
          * Taille maximale d'une zone en octet.
          */

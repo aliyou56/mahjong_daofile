@@ -52,17 +52,6 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<TileZone> {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-//
-//    ArrayList<GameTile> createRandomTiles(int nb, int id) {
-//        ArrayList<GameTile> tiles = new ArrayList<>();
-//        for (int i = 0; i < nb; i++) {
-//            AbstractTile absTile = new CommonTile(CommonTile.Family.BAMBOO, CommonTile.Number.NINE);
-//            GameTile tile = new GameTile(i + 1, absTile, new UUID(0, id));
-//            tiles.add(tile);
-//            id++;
-//        }
-//        return tiles;
-//    }
 
     private ArrayList<GameTile> createRandomTiles(int nb) {
         ArrayList<GameTile> tiles = new ArrayList<>();
