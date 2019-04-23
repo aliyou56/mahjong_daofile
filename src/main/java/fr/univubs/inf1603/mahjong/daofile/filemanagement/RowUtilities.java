@@ -39,23 +39,19 @@ public class RowUtilities {
     public static void updateRowsPointer(List<? extends AbstractRow> sortedListByPointer, long rowPointer, int offset) throws DAOFileException {
         FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
         int position = getRowPositionFormSortedListByPointer(sortedListByPointer, rowPointer);
-
-        System.out.println("** RowUtilities.updateRowsPointer : "
-                + "\n\t pointer  : " + rowPointer 
-                + "\n\t offset   : " + offset
-                + "\n\t listSize : " + sortedListByPointer.size()
-                + "\n\t position : " + position);
+        LOGGER.log(Level.INFO, "** RowUtilities.updateRowsPointer : " 
+                + "\n\t pointer  : {0}"
+                + "\n\t offset   : {1}" 
+                + "\n\t listSize : {2}" 
+                + "\n\t position : {3}", 
+                new Object[]{rowPointer, offset, sortedListByPointer.size(), position});
         if (!sortedListByPointer.isEmpty()) {
-            System.out.print("\t before   : ");
-            sortedListByPointer.forEach((ar) -> {
-                System.out.print(ar.getRowPointer() + ", ");
-            });
-
+            LOGGER.log(Level.INFO, print("\t before   : ", sortedListByPointer));
             AbstractRow rowAtPosition = sortedListByPointer.get(position);
-            System.out.println("\n\t type     : " + rowAtPosition.getData().getClass().getSimpleName());
+//            System.out.println("\n\t type     : " + rowAtPosition.getData().getClass().getSimpleName());
             if (rowAtPosition.getRowPointer() < rowPointer) {
                 position += 1;
-                System.out.println("\t position : " + position);
+//                System.out.println("\t position : " + position);
             }
             for (int i = position; i < sortedListByPointer.size(); i++) {
                 AbstractRow nextRow = sortedListByPointer.get(i);
@@ -67,13 +63,24 @@ public class RowUtilities {
                             new Object[]{nextRow, oldPointer, newPointer, offset});
                 }
             }
-
-            System.out.print("\t after    : ");
-            sortedListByPointer.forEach((ar) -> {
-                System.out.print(ar.getRowPointer() + ", ");
-            });
-            System.out.println("");
+            LOGGER.log(Level.INFO, print("\t after    : ", sortedListByPointer));
         }
+    }
+    
+    /**
+     * just for test
+     * @param name
+     * @param list
+     * @return 
+     */
+    static private String print(String name, List<? extends AbstractRow> list) {
+        StringBuilder result = new StringBuilder();
+        result.append(name);
+        list.forEach((ar) -> {
+                result.append(ar.getRowPointer()).append(", ");
+        });
+        result.append("\n");
+        return result.toString();
     }
 
     /**
@@ -234,12 +241,4 @@ public class RowUtilities {
         }
         return a;
     }
-
-//    void print(List<AbstractRow> list) {
-//        System.out.println("\nprinttttttttttttttt");
-//        list.forEach((row) -> {
-//            System.out.println(row);
-//        });
-//        System.out.println("printtttttttttttttt\n");
-//    }
 }

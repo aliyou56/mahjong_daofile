@@ -8,6 +8,8 @@ import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -130,11 +132,16 @@ public class DAOFileWriter implements PropertyChangeListener {
         checkNotNull("buffer", buffer);
         if (position >= 0) {
             buffer.flip();
-            fileChannel.position(position);
-            while (buffer.hasRemaining()) {
-                fileChannel.write(buffer);
+            FileLock fileLock = fileChannel.tryLock(position, buffer.capacity(), true);
+//            FileLock fileLock = fileChannel.lock(position, buffer.capacity(), false);
+            if(fileLock != null) {
+                fileChannel.position(position);
+                while (buffer.hasRemaining()) {
+                    fileChannel.write(buffer);
+                }
+                fileLock.release();
+                return (int) (buffer.position() - position);
             }
-            return (int) (buffer.position() - position);
         }
         return -1;
     }
@@ -290,9 +297,11 @@ public class DAOFileWriter implements PropertyChangeListener {
             int nbRemaingBytes = (int) (fileChannel.size() - nextPosition);
             nbRemaingBytes = nbRemaingBytes < 0 ? 0 : nbRemaingBytes;
             LOGGER.log(Level.FINE, "nextPosition={0}, nbRemaingBytes={1}", new Object[]{nextPosition, nbRemaingBytes});
-
+//            FileLock fileLock = fileChannel.lock();
+//            if(fileLock != null) {
             ByteBuffer remainingBytes = read(nextPosition, nbRemaingBytes);
             if (remainingBytes != null) {
+//                write(position, remainingBytes);
                 fileChannel.position(position);
                 while (remainingBytes.hasRemaining()) {
                     fileChannel.write(remainingBytes);
@@ -300,6 +309,8 @@ public class DAOFileWriter implements PropertyChangeListener {
             }
             fileChannel.truncate(position + nbRemaingBytes);
             result = true;
+//            fileLock.release();
+//            }
         }
         LOGGER.log(Level.FINE, "fileSize : {0} -> {1}", new Object[]{fileSize, fileChannel.size()});
         return result;

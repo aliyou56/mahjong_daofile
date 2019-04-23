@@ -1,7 +1,9 @@
 
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -15,7 +17,13 @@ import static org.junit.Assert.*;
  */
 public class LinkManagerTest {
     
+    Path rootDir;
+    
     public LinkManagerTest() {
+        rootDir = Paths.get("/tmp/mahjong", "dao");
+        if(!rootDir.toFile().exists()) {
+            rootDir.toFile().mkdirs();
+        }
     }
     
     @AfterClass
@@ -24,14 +32,14 @@ public class LinkManagerTest {
 
     /**
      * Test of setDAO method, of class LinkManager.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
 //    @Test
-//    public void testSetDAO() {
+//    public void testSetDAO() throws DAOFileException {
 //        System.out.println("setDAO");
-//        LinkManager instance = null;
+//        Path filePath = rootDir.resolve("linkManager.test");
+//        LinkManager instance = new LinkManager(filePath);
 //        instance.setDAO(null);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
 //    }
 
     /**

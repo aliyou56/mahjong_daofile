@@ -168,18 +168,14 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
     private void updateDataRowsPointer(long pointer, long dataPointer, int offset) throws DAOFileException {
         int position = RowUtilities.getRowPositionFormSortedListByPointer(getRowsSortedByRowPointer(), pointer); 
         
-        System.out.println("++ IndexManager.updateDataRowsPointer : "
-                + "\n\t pointer  : " + pointer
-                + "\n\t offset   : " + offset
-                + "\n\t listSize : " + getRowsSortedByRowPointer().size()
-                + "\n\t position : " + position);
-        
+        LOGGER.log(Level.INFO, "++ IndexManager.updateDataRowsPointer : " 
+                + "\n\t pointer  : {0}"
+                + "\n\t offset   : {1}" 
+                + "\n\t listSize : {2}" 
+                + "\n\t position : {3}", 
+                new Object[]{pointer, offset, getRowsSortedByRowPointer().size(), position});
         if (!getRowsSortedByRowPointer().isEmpty()) {
-            System.out.print("\t before   : ");
-            getRowsSortedByRowPointer().forEach((ar) -> {
-                System.out.print(ar.getData().getPointer() + ", ");
-            });
-            System.out.println("");
+            LOGGER.log(Level.INFO, print("\t before   : ", getRowsSortedByRowPointer()));
             
             IndexRow indexRowAtPosition = getRowsSortedByRowPointer().get(position);
             if (indexRowAtPosition.getData().getPointer() < dataPointer) {
@@ -196,12 +192,23 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
                             new Object[]{nextIndex, oldPointer, newPointer, offset});
                 }
             }
-            
-            System.out.print("\t after    : ");
-            getRowsSortedByRowPointer().forEach((ar) -> {
-                System.out.print(ar.getData().getPointer() + ", ");
-            });
-            System.out.println("");
+            LOGGER.log(Level.INFO, print("\t after    : ", getRowsSortedByRowPointer()));
         }
+    }
+    
+    /**
+     * just for log
+     * @param name
+     * @param list
+     * @return 
+     */
+    private String print(String name, List<IndexRow> list) {
+        StringBuilder result = new StringBuilder();
+        result.append(name);
+        list.forEach((ar) -> {
+                result.append(ar.getData().getPointer()).append(", ");
+        });
+        result.append("\n");
+        return result.toString();
     }
 }

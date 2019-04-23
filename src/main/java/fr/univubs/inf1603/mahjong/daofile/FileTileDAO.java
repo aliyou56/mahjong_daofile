@@ -92,7 +92,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
             // on vérifie si la tuile n'est pas reliée à une zone
             if (tileToZoneLinkManager.getRow(gameTile.getUUID()) == null) {
                 if (super.removeDataRow(gameTile.getUUID())) {
-                    LOGGER.log(Level.INFO, "[INFO] {0} id='{1} deleted from persistance", new Object[]{gameTile.getClass().getSimpleName(), gameTile.getUUID()});
+                    LOGGER.log(Level.INFO, "[INFO] {0} id={1} deleted from persistance", new Object[]{gameTile.getClass().getSimpleName(), gameTile.getUUID()});
                 }
             } else {
                 LOGGER.log(Level.INFO, "GameTile id={0} canno't be deleted cause it is linked to a zone", gameTile.getUUID());

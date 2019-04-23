@@ -281,7 +281,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @param dataListToDelete Liste des objets <code>T</code> à supprimer.
      * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    final public void deleteFromPersistance(List<T> dataListToDelete) throws DAOFileException { //TODO check
+    final synchronized public void deleteFromPersistance(List<T> dataListToDelete) throws DAOFileException { //TODO check
         List<IndexRow> multipleRemoveList = indexManager.getRowList(dataListToDelete);
         if (multipleRemoveList != null) {
             List<IndexRow> singleRemoveList = indexManager.getSingleRemoveList(multipleRemoveList);

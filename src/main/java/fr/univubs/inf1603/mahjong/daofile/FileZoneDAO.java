@@ -102,7 +102,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
         try {
             tileToZoneLinkManager.removeChildren(tileZone.getTiles());
             if (super.removeDataRow(tileZone.getUUID())) {
-                LOGGER.log(Level.INFO, "[INFO] {0} id='{1} deleted from persistance", new Object[]{tileZone.getClass().getSimpleName(), tileZone.getUUID()});
+                LOGGER.log(Level.INFO, "[INFO] {0} id={1} deleted from persistance", new Object[]{tileZone.getClass().getSimpleName(), tileZone.getUUID()});
             }
         } catch (DAOFileException ex) {
             throw new DAOException(ex.getMessage(), ex);

@@ -160,7 +160,7 @@ public class LinkRow extends AbstractRow<Link> {
             if (this.parentID != parentID) {
                 UUID oldValue = this.parentID;
                 this.parentID = parentID;
-                this.pcs.firePropertyChange("increment", oldValue, this.parentID);
+                this.pcs.firePropertyChange("parentID", oldValue, this.parentID);
             }
         }
 
