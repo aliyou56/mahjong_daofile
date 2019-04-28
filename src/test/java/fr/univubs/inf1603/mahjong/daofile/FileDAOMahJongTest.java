@@ -20,13 +20,11 @@ import static org.junit.Assert.*;
 public abstract class FileDAOMahJongTest<T extends Persistable> {
 
     protected static Path rootDir;
-    protected static DAOManager daoManager;
 
     protected FileDAOMahJongTest() {
         System.out.println("FileDAOMahJongTest");
         rootDir = Paths.get("/tmp", "mahjong", "dao");
         System.out.println(" rootDir : " + rootDir);
-        daoManager = FileDAOManager.getInstance(rootDir);
     }
 
     /**
@@ -43,7 +41,7 @@ public abstract class FileDAOMahJongTest<T extends Persistable> {
      *
      * @param path Chemin du parent.
      */
-    private static void clean(Path path) {
+    protected static void clean(Path path) {
         File pathFile = path.toFile();
         if (pathFile.isDirectory()) {
             for (File file : pathFile.listFiles()) {
@@ -63,9 +61,8 @@ public abstract class FileDAOMahJongTest<T extends Persistable> {
     protected void testSave(DAO<T> dao, T object) {
         try {
             dao.save(object);
-//            Thread.sleep(4000);
             assertEquals(object, dao.find(object.getUUID()));
-        } catch (DAOException /*| InterruptedException*/ ex) {
+        } catch (DAOException  ex) {
             ex.printStackTrace(System.out);
         }
     }

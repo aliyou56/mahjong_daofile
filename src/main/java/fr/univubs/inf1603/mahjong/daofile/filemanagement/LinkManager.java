@@ -3,10 +3,11 @@ package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.daofile.FileDAOMahjong;
+import static fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities.checkNotNull;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.LinkRow.Link;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
-import java.io.IOException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -68,7 +69,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      */
     public LinkManager(Path linkFilePath) throws DAOFileException {
         super(linkFilePath, LinkRow.LINK_ROW_SIZE);
-        System.out.println(" -> LinkManager");
+//        System.out.println(" -> LinkManager");
         this.mapParentChild = new HashMap<>();
         getRowsSortedByRowPointer().forEach((row) -> {
             Link link = (Link) row.getData();
@@ -123,16 +124,16 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
         }
     }
 
-//    private void printMap() {
-//        System.out.println("");
-//        mapParentChild.entrySet().forEach((entry) -> {
-//            System.out.println(entry.getKey() + " -> " + entry.getValue());
-//        });
-//        System.out.println("");
-////////        for(Map.Entry<UUID, ArrayList<UUID>> entry : mapParentChild.entrySet()) {
-////////            System.out.println(entry.getKey() +" -> "+ entry.getValue());
-////////        }
-//    }
+    private void printMap() {
+        System.out.println("");
+        mapParentChild.entrySet().forEach((entry) -> {
+            System.out.println(entry.getKey() + " -> " + entry.getValue());
+        });
+        System.out.println("");
+//////        for(Map.Entry<UUID, ArrayList<UUID>> entry : mapParentChild.entrySet()) {
+//////            System.out.println(entry.getKey() +" -> "+ entry.getValue());
+//////        }
+    }
     /**
      * {@inheritDoc}
      */
@@ -149,6 +150,23 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
         return new LinkRow(writer, rowPointer);
     }
 
+    public void addChild(UUID parentID, T child) throws DAOFileException {
+        checkNotNull("parentID", parentID);
+        checkNotNull("child", child);
+        LOGGER.log(Level.FINE, "addChild -> parentID : {0} childID : {1}", new Object[]{parentID, child.getUUID()});
+        Link link = new Link(child.getUUID(), parentID);
+        LinkRow newLinkRow = new LinkRow(getNextRowID(), link, getNextRowPointer());
+        super.addRow(newLinkRow);
+        putInMap(link);
+        try {
+            if (dao.find(child.getUUID()) == null) {
+                dao.save(child);
+            }
+        } catch (DAOException ex) {
+            throw new DAOFileException(ex.getMessage(), ex);
+        }
+    }
+
     /**
      * Lie un ensemble d'objets <code>T</code> enfant à un objet parent.
      *
@@ -157,20 +175,57 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * @throws DAOFileException s'il y'a une erreur lors de la liaison.
      */
     public void addChildren(UUID parentID, List<T> children) throws DAOFileException {
-        System.out.println("parentID : " + parentID + ", nbChilds to add : " + children.size());
+        checkNotNull("parentID", parentID);
+        checkNotNull("children", children);
+        LOGGER.log(Level.INFO, "parentID : {0}, nbChilds to add : {1}", new Object[]{parentID, children.size()});
         for (T child : children) {
-            Link link = new Link(child.getUUID(), parentID);
-            LinkRow newLinkRow = new LinkRow(getNextRowID(), link, getNextRowPointer());
-            super.addRow(newLinkRow);
-            putInMap(link);
-            try {
-                if (dao.find(child.getUUID()) == null) {
-                    dao.save(child);
+            addChild(parentID, child);
+        }
+    }
+
+    public void updateChildrenLink(UUID parentID, List<T> children) throws DAOFileException {
+        checkNotNull("parentID", parentID);
+        checkNotNull("children", children);
+        ArrayList<UUID> existedChildrenIDs = mapParentChild.get(parentID);
+        if (existedChildrenIDs.size() > children.size()) { // delete 
+            ArrayList<UUID> childrenIDs = new ArrayList<>();
+            children.forEach(child -> {
+                childrenIDs.add(child.getUUID());
+            });
+            ArrayList<UUID> toRemovechildrenIDs = new ArrayList<>();
+            existedChildrenIDs.forEach(childID -> {
+                if (!childrenIDs.contains(childID)) {
+                    toRemovechildrenIDs.add(childID);
                 }
+            });
+
+            System.out.println(" updateChildrenLink : parentID : " + parentID + ", nbChilds to remove : " + toRemovechildrenIDs.size());
+            try {
+                removeChildrenByID(toRemovechildrenIDs);
             } catch (DAOException ex) {
                 throw new DAOFileException(ex.getMessage(), ex);
             }
+        } else {
+            List<T> toUpdateList = new ArrayList<>();
+            children.forEach(child -> {
+                if (!existedChildrenIDs.contains(child.getUUID())) {
+                    toUpdateList.add(child);
+                }
+            });
+            System.out.println(" updateChildrenLink : parentID : " + parentID + ", nbNewChilds to add : " + toUpdateList.size());
+            addChildren(parentID, toUpdateList);
         }
+    }
+
+    private void removeChildrenByID(List<UUID> childIDs) throws DAOException, DAOFileException {
+        List<T> toRemove = new ArrayList<>();
+        for(UUID childID : childIDs) {
+            T child = dao.find(childID);
+            if(child != null) {
+                toRemove.add(child);
+            }
+        }
+        removeChildren(toRemove);
     }
 
     /**
@@ -180,10 +235,9 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * @param children Liste des objets enfants.
      * @throws DAOFileException s'il y'a une erreur lors de la suppression des
      * liens.
-     * @throws DAOFileException s'il y'a une erreur lors de la suppression des
-     * objets enfants du lien.
      */
     public void removeChildren(List<T> children) throws DAOFileException {
+        checkNotNull("children", children);
         if (!children.isEmpty()) {
             List<LinkRow> multipleRemoveList = super.getRowList(children);
             List<LinkRow> singleRemoveList = super.getSingleRemoveList(multipleRemoveList);
@@ -194,25 +248,27 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
                 }
             }
             if (!multipleRemoveList.isEmpty()) {
+                long startPointer = multipleRemoveList.get(0).getRowPointer();
+                multipleRemoveList.forEach(linkRow -> {
+                    super.removeRowFromRowsList(linkRow);
+                    removeFromMap(linkRow.getData());
+                });
+                int offset = multipleRemoveList.size() * rowSize;
                 try {
-                    long startPointer = multipleRemoveList.get(0).getRowPointer();
-                    multipleRemoveList.forEach(linkRow -> {
-                        super.removeRowFromRowsList(linkRow);
-                        removeFromMap(linkRow.getData());
-                    });
-                    int offset = multipleRemoveList.size() * rowSize;
                     if (rowWriter.deleteFromFile((int) startPointer, offset)) {
                         super.updateRowsPointer(startPointer, offset);
                         dao.deleteFromPersistance(children);
                         LOGGER.log(Level.INFO, " [OK] {0} Link successful deleted -> startPointer : {1} -- offset : {2}",
                                 new Object[]{multipleRemoveList.size(), startPointer, offset});
-                        System.out.println("    { ");
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("\t{ ");
                         multipleRemoveList.forEach(linkRow -> {
-                            System.out.println(" \t -> childID = " + linkRow.getData().getUUID() + " : parentID = " + linkRow.getData().getParentID());
+                            sb.append("\n\t childID = ").append(linkRow.getData().getUUID()).append(" -> parentID = ").append(linkRow.getData().getParentID());
                         });
-                        System.out.println("    } ");
+                        sb.append("\t} ");
+                        LOGGER.log(Level.FINE, sb.toString());
                     }
-                } catch (IOException ex) {
+                } catch (DAOFileWriterException ex) {
                     throw new DAOFileException(ex.getMessage(), ex);
                 }
             }
@@ -229,15 +285,17 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      */
     public ArrayList<T> loadChildren(UUID parentID) throws DAOException {
         ArrayList<T> children = new ArrayList<>();
-//        System.err.println("\n loadChildren -> parentID="+parentID + ", nbChildren={ ");
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n parentID=").append(parentID).append(", children = { ");
         if (mapParentChild.containsKey(parentID)) {
             for (UUID childID : mapParentChild.get(parentID)) {
                 T child = dao.find(childID);
-//                System.err.println(" \tchilID="+childID + ", loadedID="+child.getUUID());
+                sb.append("\n\tchilID=").append(childID).append(", loadedID=").append(child.getUUID());
                 children.add(child);
             }
         }
-//        System.err.println("   }\n");
+        sb.append("\n   }\n");
+        LOGGER.log(Level.FINE, sb.toString());
         return children;
     }
 }

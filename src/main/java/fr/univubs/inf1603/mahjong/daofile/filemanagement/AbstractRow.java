@@ -3,19 +3,19 @@ package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import fr.univubs.inf1603.mahjong.engine.persistence.MahjongObservable;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * La classe abstraite <code>AbstractRow</code> définit la notion de tuple. Un
- * tuple encapsule un objet <code>MahJongObservable</code>. Il répresente la
+ * La classe abstraite {@code AbstractRow} définit la notion de tuple. Un
+ * tuple encapsule un objet de type {@code MahJongObservable}. Il répresente la
  * plus petite unité de données écrite/lue sur/depuis un fichier. Il écoute
  * également l'objet qu'il encapsule. Dès qu'il est notifié d'un changement il
  * notifie à son tour le processus qui éffectue les opérations d'entrée/sortie
@@ -72,6 +72,27 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
     private final int dataSize;
 
     /**
+     * Constructeur privé qui initialise la taille d'un objet encapsulé
+     * <code>dataSize</code> et un pointeur de tuple <code>rowPointer</code>.
+     *
+     * @param dataSize Taille d'un objet encapsulé dans un tuple. DOIT ETRE
+     * SUPERIEUR A 0.
+     * @param rowPointer Pointeur d'un tuple. DOIT ETRE POSITIF.
+     */
+    private AbstractRow(int dataSize, long rowPointer) {
+        if (dataSize < 1) {
+            throw new IllegalArgumentException("dataSize : " + dataSize + " must be greater than zero.");
+        }
+        if (rowPointer < -1) {
+            throw new IllegalArgumentException("rowPointer : " + rowPointer + " must be greater or equal to zero");
+        }
+        this.dataSize = dataSize;
+        this.rowPointer = rowPointer;
+        this.changed = false;
+        this.pcs = new PropertyChangeSupport(this);
+    }
+
+    /**
      * Constructeur avec un identifiant de tuple <code>rowID</code>, un objet
      * encapsulé <code>data</code>, la taille d'un objet encapsulé
      * <code>dataSize</code> et un pointeur de tuple <code>rowPointer</code>.
@@ -82,13 +103,11 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      * SUPERIEUR A 0.
      * @param rowPointer Pointeur d'un tuple. Pointe sur le début du tuple dans
      * un fichier. DOIT ETRE POSITIF.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
-     * s'il y'a une erreur lors de l'instanciation.
      */
-    protected AbstractRow(int rowID, T data, int dataSize, long rowPointer) throws DAOFileException {
+    protected AbstractRow(int rowID, T data, int dataSize, long rowPointer) {
         this(dataSize, rowPointer);
         if (rowID < 0) {
-            throw new DAOFileException("rowID : " + rowID + " must be greater or equal to zero.");
+            throw new IllegalArgumentException("rowID : " + rowID + " must be greater or equal to zero.");
         }
         FileDAOUtilities.checkNotNull("data", data);
         this.rowID = rowID;
@@ -115,11 +134,12 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
     }
 
     /**
-     * Constructeur avec le writer <code>writer</code>, la taille d'un objet
+     * Constructeur avec le processus qui éffectue les opérations d'entrée/sortie 
+     * sur un fichier <code>writer</code>, la taille d'un objet
      * encapsulé <code>dataSize</code> et un pointeur de tuple
      * <code>rowPointer</code>.
      *
-     * @param writer Writer
+     * @param writer Processus qui éffectue les opérations d'entrée/sortie sur un fichier
      * @param dataSize Taille d'un objet encapsulé dans un tuple. DOIT ETRE
      * SUPERIEUR A 0.
      * @param rowPointer Pointeur d'un tuple. DOIT ETRE POSITIF.
@@ -127,34 +147,20 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      */
     protected AbstractRow(DAOFileWriter writer, int dataSize, long rowPointer) throws DAOFileException {
         this(dataSize, rowPointer);
+        FileDAOUtilities.checkNotNull("writer", writer);
         try {
-            FileDAOUtilities.checkNotNull("writer", writer);
             ByteBuffer buffer = writer.read(rowPointer, getRowSize());
-            read(buffer);
-        } catch (IOException ioe) {
-            throw new DAOFileException("IO Error : " + ioe.getMessage());
+            if (buffer != null) {
+                read(buffer);
+            } else {
+                String message = "Row could not be read from the file."
+                        +"\n\t cause -> Couldn't read "+getRowSize()+" bytes from the file at the position " + rowPointer + "." ;
+//                LOGGER.log(Level.WARNING, message);
+                throw new DAOFileException(message);
+            }
+        } catch (DAOFileWriterException ex) {
+            throw new DAOFileException(ex.getMessage(), ex);
         }
-    }
-
-    /**
-     * Constructeur privé qui initialise la taille d'un objet encapsulé
-     * <code>dataSize</code> et un pointeur de tuple <code>rowPointer</code>.
-     *
-     * @param dataSize Taille d'un objet encapsulé dans un tuple. DOIT ETRE
-     * SUPERIEUR A 0.
-     * @param rowPointer Pointeur d'un tuple. DOIT ETRE POSITIF.
-     */
-    private AbstractRow(int dataSize, long rowPointer) {
-        if (dataSize < 1) {
-            throw new IllegalArgumentException("dataSize : " + dataSize + " must be greater than zero.");
-        }
-        if (rowPointer < -1) {
-            throw new IllegalArgumentException("rowPointer : " + rowPointer + " must be greater or equal to zero");
-        }
-        this.dataSize = dataSize;
-        this.rowPointer = rowPointer;
-        this.changed = false;
-        this.pcs = new PropertyChangeSupport(this);
     }
 
     /**
@@ -163,22 +169,25 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      * @param buffer Tampon d'octets
      * @throws DAOException s'il y'a une erreur lors de la lecture.
      */
-    void read(ByteBuffer buffer) throws DAOFileException {
-//        System.err.println(" AbstractRow.read -> pointer = " + rowPointer);
-        FileDAOUtilities.checkNotNull("buffer", buffer);
-//        if (buffer.remaining() >= ROW_HEADER_SIZE - 1) {
-        this.rowID = buffer.getInt();
-        T dataRead = readData(buffer);
-        if (dataRead != null) {
+    private void read(ByteBuffer buffer) throws DAOFileException {
+        LOGGER.log(Level.FINE, " AbstractRow.read -> pointer = {0}", rowPointer);
+        int position = buffer.position();
+        try {
+            this.rowID = buffer.getInt();
+            T dataRead = readData(buffer);
             if (this.data != null) {
                 this.data.removePropertyChangeListener(this);
             }
             this.data = dataRead;
             this.data.addPropertyChangeListener(this);
-        } else {
-            throw new DAOFileException("L'objet n'a pas pu etre lu depuis le tampon d'octet.");
-        }
-//        }
+        } catch (DAOFileException ex) {
+            buffer.position(position);
+            String message = "A " + getData().getClass().getSimpleName() + " cannot be read from this buffer : " + buffer
+                    + "\n\t cause -> remaining bytes in the buffer is not enought"
+                    + "\n\t          " + getData().getClass().getSimpleName() + " size = " + getDataSize();
+            LOGGER.log(Level.SEVERE, message);
+            throw new DAOFileException(message);
+        } 
     }
 
     /**
@@ -187,27 +196,38 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      * @param buffer Tampon d'octets.
      * @throws DAOFileException s'il y'a une erreur lors de l'écriture.
      */
-    void write(ByteBuffer buffer) throws DAOFileException {
-        long startPosition = buffer.position();
-        buffer.putInt(rowID);
-        writeData(buffer);
-        int nbWritedBytes = (int) (startPosition + getRowSize() - buffer.position());
-        if (nbWritedBytes != getRowSize()) {
-            buffer.position(buffer.position() + nbWritedBytes);
-        }
-        LOGGER.log(Level.FINE, "startPosition : {0}, nbWritedBytes : {1}, endPosition : {2}, rowSize : {3}, dataType : {4}",
-                new Object[]{startPosition, nbWritedBytes, buffer.position(), getRowSize(), this.data.getClass().getSimpleName()});
-        this.changed = false;
-//        setChanged(false);
+    int write(ByteBuffer buffer) throws DAOFileException {
+        int ret = -1;
+        int startPosition = buffer.position();
+        try {
+            buffer.putInt(rowID);
+            int nbWritedBytes = writeData(buffer);
+            if (nbWritedBytes != getDataSize()) {
+                int diff = getDataSize() - nbWritedBytes;
+                buffer.position(buffer.position() + diff);
+            }
+            LOGGER.log(Level.FINE, "startPosition : {0}, nbWritedBytes : {1}, endPosition : {2}, rowSize : {3}, dataType : {4}",
+                    new Object[]{startPosition, nbWritedBytes, buffer.position(), getRowSize(), this.data.getClass().getSimpleName()});
+//            this.changed = false;
+            setChanged(false);
+            ret = ROW_HEADER_SIZE + nbWritedBytes;
+        } catch (DAOFileException ex) {
+            buffer.position(startPosition);
+            String message = "A " + getData().getClass().getSimpleName() + " cannot be writed in this buffer '" + buffer +"'"
+                    + "\n\t cause -> remaining bytes in the buffer is not enought"
+                    + "\n\t          " + getData().getClass().getSimpleName() + " size = " + getDataSize();
+            LOGGER.log(Level.SEVERE, message);
+            throw new DAOFileException(message);
+        } 
+        return ret;
     }
 
     /**
-     * Lis et rétourne un objet encapsulé <code>data</code> depuis un tampon
-     * d'octet <code>buffer</code>.
+     * Renvoie un objet {@code T} encapsulé lu depuis un tampon d'octet <code>buffer</code>.
      *
-     * @param buffer Tampon d'octets à partir duquel un objet encapsulé
-     * <code>data</code> est lu.
-     * @return Objet <code>T</code> encapsulé <code>data</code> dans un tuple.
+     * @param buffer Tampon d'octets à partir duquel un objet encapsulé est lu.
+     * @return Objet <code>T</code> encapsulé  dans un tuple si les données dans le tampon
+     * sont cohérentes.
      * @throws DAOFileException s'il y'a une reeur lors de la lecture.
      */
     protected abstract T readData(ByteBuffer buffer) throws DAOFileException;
@@ -216,15 +236,15 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      * Ecrit un objet encapsulé <code>data</code> dans un tampon d'octet
      * <code>buffer</code>.
      *
-     * @param buffer Tampon d'octets dans lequel un objet encapsulé
-     * <code>data</code> est écrit.
+     * @param buffer Tampon d'octets dans lequel un objet encapsulé est écrit.
+     * @return Le nombre d'octes écrit dans le tampon d'octets
      * @throws DAOFileException s'il y'a une erreur lors de l'écriture.
      */
-    protected abstract void writeData(ByteBuffer buffer) throws DAOFileException;
+    protected abstract int writeData(ByteBuffer buffer) throws DAOFileException;
 
     /**
      * Rétourne la taille d'un tuple, correspond à la taille de l'en-tete du
-     * tuple + la taille d'un objet encapsulé <code>data</code> dans le tuple.
+     * tuple {@code +} la taille de l' objet {@code T} encapsulé dans le tuple.
      *
      * @return Taille d'un tuple.
      */
@@ -285,35 +305,40 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      * le tuple est écrit dans un fichier.
      */
     public void setRowPointer(long rowPointer, boolean notifyWriter) {
-        if (this.rowPointer != rowPointer && rowPointer >= -1) {
-            this.rowPointer = rowPointer;
-            if (notifyWriter) {
-                setChanged(true);
+        if (rowPointer < -1) {
+            String message = "Row pointer didn't changed. "
+                    + "\n\t cause -> newRowPointer '" + rowPointer + "' is less than -1.";
+            LOGGER.log(Level.WARNING, message);
+        } else {
+            if (this.rowPointer != rowPointer) {
+                this.rowPointer = rowPointer;
+                if (notifyWriter) {
+                    setChanged(true);
+                }
             }
         }
     }
 
     /**
-     * Rétourne un objet <code>T</code> encapsulé dans un tuple.
+     * Rétourne l'objet {@code T} encapsulé dans un tuple.
      *
-     * @return Objet <code>T</code> encapsulé dans un tuple.
+     * @return Objet {@code T} encapsulé dans un tuple.
      */
     public T getData() {
         return data;
     }
 
     /**
-     * Rétourne la taille d'un objet encapsulé <code>data</code> dans un tuple.
+     * Rétourne la taille de l'objet {@code T} encapsulé  dans un tuple.
      *
-     * @return Taille d'un objet encapsulé <code>data</code> dans un tuple.
+     * @return Taille de l'objet {@code T} encapsulé dans un tuple.
      */
     public int getDataSize() {
         return this.dataSize;
     }
 
     /**
-     * Change l'état d'un tuple lorsque l'état de l'objet encapsulé
-     * <code>data</code> change.
+     * Change l'état d'un tuple lorsque l'état de l'objet encapsulé change.
      *
      * @param evt Evenement
      */
@@ -331,8 +356,6 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
     }
 
     /**
-     * Rétourne une description textuelle d'un tuple
-     *
      * @return Description textuelle d'un tuple.
      */
     @Override

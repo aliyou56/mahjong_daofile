@@ -1,7 +1,7 @@
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
-import java.io.IOException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.List;
@@ -55,7 +55,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      */
     public IndexManager(Path indexFilePath, int dataRowSize) throws DAOFileException {
         super(indexFilePath, IndexRow.INDEX_ROW_SIZE);
-        System.out.println(" -> IndexManager [dataRowSize=" + dataRowSize + "]");
+//        System.out.println(" -> IndexManager [dataRowSize=" + dataRowSize + "]");
         this.dataRowSize = dataRowSize;
     }
 
@@ -84,7 +84,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
     public void addIndex(Index index) throws DAOFileException {
         IndexRow newIndexRow = new IndexRow(getNextRowID(), index, super.getNextRowPointer());
         if(!super.addRow(newIndexRow)) {
-            System.err.println("index not added : " +index);
+            LOGGER.log(Level.SEVERE, "index not added : {0}", index);
         }
     }
 
@@ -136,21 +136,21 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      * @param indexRowsSortedByPointerToDelete Liste des tuples d'index à supprimer.
      * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    public void removeIndex(List<IndexRow> indexRowsSortedByPointerToDelete) throws DAOFileException { 
+    public void removeIndex(List<IndexRow> indexRowsSortedByPointerToDelete) throws DAOFileException {
         if (!indexRowsSortedByPointerToDelete.isEmpty()) {
+            IndexRow firstIndexRow = indexRowsSortedByPointerToDelete.get(0);
+            long startPointer = firstIndexRow.getRowPointer();
+            long dataPointer = firstIndexRow.getData().getPointer();
+            indexRowsSortedByPointerToDelete.forEach((indexRow) -> {
+                super.removeRowFromRowsList(indexRow);
+            });
+            updateDataRowsPointer(startPointer, dataPointer, indexRowsSortedByPointerToDelete.size() * this.dataRowSize);
+            int offset = indexRowsSortedByPointerToDelete.size() * super.rowSize;
             try {
-                IndexRow firstIndexRow = indexRowsSortedByPointerToDelete.get(0);
-                long startPointer = firstIndexRow.getRowPointer();
-                long dataPointer = firstIndexRow.getData().getPointer();
-                indexRowsSortedByPointerToDelete.forEach((indexRow) -> {
-                    super.removeRowFromRowsList(indexRow);
-                });
-                updateDataRowsPointer(startPointer, dataPointer, indexRowsSortedByPointerToDelete.size() * this.dataRowSize);
-                int offset = indexRowsSortedByPointerToDelete.size() * super.rowSize;
                 if (rowWriter.deleteFromFile((int) startPointer, offset)) {
                     super.updateRowsPointer(startPointer, offset);
                 }
-            } catch (IOException ex) {
+            } catch (DAOFileWriterException ex) {
                 throw new DAOFileException(ex.getMessage(), ex);
             }
         }
@@ -168,19 +168,19 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
     private void updateDataRowsPointer(long pointer, long dataPointer, int offset) throws DAOFileException {
         int position = RowUtilities.getRowPositionFormSortedListByPointer(getRowsSortedByRowPointer(), pointer); 
         
-        LOGGER.log(Level.INFO, "++ IndexManager.updateDataRowsPointer : " 
+        LOGGER.log(Level.FINE, "++ IndexManager.updateDataRowsPointer : " 
                 + "\n\t pointer  : {0}"
                 + "\n\t offset   : {1}" 
                 + "\n\t listSize : {2}" 
                 + "\n\t position : {3}", 
                 new Object[]{pointer, offset, getRowsSortedByRowPointer().size(), position});
         if (!getRowsSortedByRowPointer().isEmpty()) {
-            LOGGER.log(Level.INFO, print("\t before   : ", getRowsSortedByRowPointer()));
+            LOGGER.log(Level.FINE, print("\t before   : ", getRowsSortedByRowPointer()));
             
             IndexRow indexRowAtPosition = getRowsSortedByRowPointer().get(position);
             if (indexRowAtPosition.getData().getPointer() < dataPointer) {
                 position += 1;
-                System.out.println("\n\t position : " + position);
+//                System.out.println("\n\t position : " + position);
             }
             for (int i = position; i < getRowsSortedByRowPointer().size(); i++) {
                 Index nextIndex = (Index) getRowsSortedByRowPointer().get(i).getData();
@@ -192,7 +192,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
                             new Object[]{nextIndex, oldPointer, newPointer, offset});
                 }
             }
-            LOGGER.log(Level.INFO, print("\t after    : ", getRowsSortedByRowPointer()));
+            LOGGER.log(Level.FINE, print("\t after    : ", getRowsSortedByRowPointer()));
         }
     }
     

@@ -1,11 +1,7 @@
 
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.RowUtilities;
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.IndexRow;
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.AbstractRow;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.Index;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;

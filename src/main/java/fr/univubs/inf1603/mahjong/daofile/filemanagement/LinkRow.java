@@ -2,11 +2,14 @@ package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.LinkRow.Link;
-import fr.univubs.inf1603.mahjong.daofile.exception.ByteBufferException;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import java.beans.PropertyChangeSupport;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Cette classe répresente un tuple qui encapsule un lien.
@@ -89,11 +92,13 @@ public class LinkRow extends AbstractRow<Link> {
      * @throws DAOFileException s'il y'a une erreur lors de l'écriture.
      */
     @Override
-    protected void writeData(ByteBuffer buffer) throws DAOFileException {
+    protected int writeData(ByteBuffer buffer) throws DAOFileException {
         try {
+            int startPosition = buffer.position();
             DAOFileWriter.writeUUID(buffer, getData().getUUID());
             DAOFileWriter.writeUUID(buffer, getData().getParentID());
-        } catch (ByteBufferException ex) {
+            return buffer.position() - startPosition;
+        } catch (DAOFileWriterException ex) {
             throw new DAOFileException(ex.getMessage(), ex);
         }
     }
@@ -179,7 +184,37 @@ public class LinkRow extends AbstractRow<Link> {
          */
         @Override
         public String toString() {
-            return "Link{" + "id=" + childID + ", parentID=" + parentID + '}';
+            return "Link{" + "childID=" + childID + ", parentID=" + parentID + '}';
         }
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 43 * hash + Objects.hashCode(this.childID);
+            hash = 43 * hash + Objects.hashCode(this.parentID);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Link other = (Link) obj;
+            if (!Objects.equals(this.childID, other.childID)) {
+                return false;
+            }
+            if (!Objects.equals(this.parentID, other.parentID)) {
+                return false;
+            }
+            return true;
+        }
+        
     }
 }

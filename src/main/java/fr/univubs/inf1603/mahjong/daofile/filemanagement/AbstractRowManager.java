@@ -1,10 +1,11 @@
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
+import fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import fr.univubs.inf1603.mahjong.engine.persistence.UniqueIdentifiable;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,15 +16,15 @@ import java.util.logging.Logger;
 
 /**
  * Cette classe gère un ensemble de tuples encapulant soit un index
- * {@link Index} ou un lien {@link LinkRow.Link}. A l'instanciation
- * tous les tuples sont chargés en mémoire dans 2 listes triées (la première
- * suivant le pointeur de tuple et la seconde suivant l'identifiant
- * <code>UUID</code> des objets <code>T</code> encapsulés dans les tuples). Lors
- * de l'ajout d'un nouvel element, sa position dans la seconde liste est
- * déterminée et il est inséré à cette posiiton. Cela permet de 4 maintenir en
- * permanence cette liste triée. Ainsi un élement est retrtouvé à l'aide de
- * l'algorithme de recherche dichotomique (O(log(n))). Après la suppression d'un
- * tuple, le pointeur des tuples qui suivent est mis à jour.
+ * {@link Index} ou un lien {@link LinkRow.Link}. A l'instanciation tous les
+ * tuples sont chargés en mémoire dans 2 listes triées (la première suivant le
+ * pointeur de tuple et la seconde suivant l'identifiant <code>UUID</code> des
+ * objets <code>T</code> encapsulés dans les tuples). Lors de l'ajout d'un
+ * nouvel element, sa position dans la seconde liste est déterminée et il est
+ * inséré à cette posiiton. Cela permet de 4 maintenir en permanence cette liste
+ * triée. Ainsi un élement est retrtouvé à l'aide de l'algorithme de recherche
+ * dichotomique (O(log(n))). Après la suppression d'un tuple, le pointeur des
+ * tuples qui suivent est mis à jour.
  *
  * @author aliyou, nesrine
  * @version 1.1.0
@@ -35,10 +36,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * Logging
      */
     private final static Logger LOGGER = Logger.getLogger(AbstractRowManager.class.getName());
-    /**
-     * Fichier.
-     */
-    private final RandomAccessFile rowFile;
+
     /**
      * Tuple encapsulant l'en-tete d'un fichier.
      */
@@ -71,17 +69,16 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      */
     protected AbstractRowManager(Path rowFilePath, int rowSize) throws DAOFileException {
         try {
-            this.rowsSortedByPointer = new ArrayList<>();
-            this.rowsSortedByUUID = new ArrayList<>();
-            this.rowFile = new RandomAccessFile(rowFilePath.toFile(), "rw");
-            this.rowWriter = new DAOFileWriter(rowFile.getChannel());
-            this.fhr = rowWriter.loadFileHeader();
-            this.rowSize = rowSize;
-            loadAllRow();
-            System.out.print(fhr.getData());
-        } catch (IOException ex) {
-            throw new DAOFileException("IO error : " + ex.getMessage());
+            this.rowWriter = new DAOFileWriter(rowFilePath);
+        } catch (DAOFileWriterException ex) {
+            throw new DAOFileException(ex.getMessage(), ex);
         }
+        this.rowSize = rowSize;
+        this.fhr = rowWriter.loadFileHeader();
+        this.rowsSortedByPointer = new ArrayList<>();
+        this.rowsSortedByUUID = new ArrayList<>();
+        loadAllRow();
+//        System.out.print(fhr.getData());
     }
 
     /**
@@ -95,7 +92,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * s'il y'a une erreur lors de l'ajout d'un tuple à la liste.
      */
     public List<T> getRowList(List<? extends Persistable> dataList) throws DAOFileException {
-//        FileDAOUtilities.checkNotNull("dataListToDelete", dataListToDelete);
+        FileDAOUtilities.checkNotNull("dataListToDelete", dataList);
         if (!dataList.isEmpty()) {
             List<T> rowList = new ArrayList<>();
             for (Persistable data : dataList) {
@@ -140,20 +137,24 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     private int loadAllRow() throws DAOFileException {
         try {
             int _nbRecords = 0;
-            if (rowFile.length() != 0) {
+            if (rowWriter.getFileLenght() != 0) {
                 long rowPointer = FileHeaderRow.FILE_HEADER_ROW_SIZE;
                 int lenght = 100 * rowSize;
                 ByteBuffer buffer;
-                while ((buffer = rowWriter.read(rowPointer, lenght)) != null) {
-                    while (buffer.hasRemaining()) {
-                        T row = createRow(buffer, rowPointer);
-                        if (row != null) {
-                            addRowToList(row);
-                            _nbRecords++;
-                            rowPointer += this.rowSize;
-                            LOGGER.log(Level.FINE, "[OK] row loaded : {0}", row);
+                try {
+                    while ((buffer = rowWriter.read(rowPointer, lenght)) != null) {
+                        while (buffer.hasRemaining()) {
+                            T row = createRow(buffer, rowPointer);
+                            if (row != null) {
+                                addRowToList(row);
+                                _nbRecords++;
+                                rowPointer += this.rowSize;
+                                LOGGER.log(Level.FINE, "[OK] row loaded : {0}", row);
+                            }
                         }
                     }
+                } catch (DAOFileWriterException ex) {
+                    throw new DAOFileException(ex.getMessage(), ex);
                 }
             }
             LOGGER.log(Level.FINE, "{0} tuples charg\u00e9s.", _nbRecords);
@@ -230,21 +231,21 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      */
     protected boolean removeRow(T row) throws DAOFileException {
         if (row != null) {
-            try {
-                int pointer = (int) row.getRowPointer();
-                T realRow = createRow(rowWriter, row.getRowPointer());
-                LOGGER.log(Level.FINE, "[INFO] row to delete : {0}", row);
-                LOGGER.log(Level.FINE, "[INFO] real row at the position in the file : {0}", realRow.getData());
-                if (((UniqueIdentifiable) realRow.getData()).getUUID().compareTo(((UniqueIdentifiable) row.getData()).getUUID()) == 0) {
-                    removeRowFromRowsList(row);
-                    updateRowsPointer(pointer, rowSize);
-                    LOGGER.log(Level.FINE, "[OK] row removed : {0}", row);
+            int pointer = (int) row.getRowPointer();
+            T realRow = createRow(rowWriter, row.getRowPointer());
+            LOGGER.log(Level.FINE, "[INFO] row to delete : {0}", row);
+            LOGGER.log(Level.FINE, "[INFO] real row at the position in the file : {0}", realRow.getData());
+            if (((UniqueIdentifiable) realRow.getData()).getUUID().compareTo(((UniqueIdentifiable) row.getData()).getUUID()) == 0) {
+                removeRowFromRowsList(row);
+                updateRowsPointer(pointer, rowSize);
+                LOGGER.log(Level.FINE, "[OK] row removed : {0}", row);
+                try {
                     return rowWriter.deleteFromFile(pointer, rowSize);
+                } catch (DAOFileWriterException ex) {
+                    throw new DAOFileException(ex.getMessage(), ex);
                 }
-                LOGGER.log(Level.FINE, "[NOK] row not removed : {0}", row);
-            } catch (IOException ex) {
-                throw new DAOFileException("IO Error : " + ex.getMessage());
             }
+            LOGGER.log(Level.FINE, "[NOK] row not removed : {0}", row);
         }
         return false;
     }

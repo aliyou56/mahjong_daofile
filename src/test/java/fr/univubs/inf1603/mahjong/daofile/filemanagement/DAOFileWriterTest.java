@@ -1,14 +1,8 @@
 
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.FileHeaderRow;
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.IndexRow;
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.AbstractRow;
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.DAOFileWriter;
-import fr.univubs.inf1603.mahjong.daofile.exception.ByteBufferException;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.FileHeader;
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.Index;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -39,15 +33,15 @@ public class DAOFileWriterTest {
     
  /**
      * Test of read method, of class DAOFileWriter.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      * @throws java.io.IOException
      */
     @Test
-    public void testRead() throws DAOFileException, IOException {
+    public void testRead() throws  IOException, DAOFileWriterException {
         System.out.println("read");
         Path filePath = rootDir.resolve("fileWriter_read.test");
         try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")) {
-            DAOFileWriter instance = new DAOFileWriter(raf.getChannel());
+            DAOFileWriter instance = new DAOFileWriter(filePath);
             assertEquals(null, instance.read(0, 2));
 
             raf.write("This is the file content".getBytes());
@@ -60,102 +54,90 @@ public class DAOFileWriterTest {
             expectedResult.flip();
             assertEquals(expectedResult, result);
         }
-        System.out.println(filePath.toFile().delete() ? "[OK] test file deleted : "+filePath.toString() : "[NOK] ");
+        filePath.toFile().delete();
     }
 
     /**
      * Test of write method, of class DAOFileWriter.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      * @throws java.io.IOException
      */
     @Test
-    public void testWrite() throws DAOFileException, IOException {
+    public void testWrite() throws DAOFileWriterException, IOException {
         System.out.println("write");
         Path filePath = rootDir.resolve("fileWriter_write.test");
-        try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")) {
-            DAOFileWriter instance = new DAOFileWriter(raf.getChannel());
-            ByteBuffer buffer = ByteBuffer.allocate(40);
-            String str = "This is a file content";
-            buffer.put(str.getBytes());
-            int expectedResult = str.length();
-            int result = instance.write(0, buffer);
-            assertEquals(expectedResult, result);
-        }
-        System.out.println(filePath.toFile().delete() ? "[OK] test file deleted  : "+filePath.toString() : "[NOK] ");
+        DAOFileWriter instance = new DAOFileWriter(filePath);
+        ByteBuffer buffer = ByteBuffer.allocate(40);
+        String str = "This is a file content";
+        buffer.put(str.getBytes());
+        int expectedResult = str.length();
+        int result = instance.write(0, buffer);
+        assertEquals(expectedResult, result);
+        filePath.toFile().delete();
     }
 
     /**
      * Test of addRowToMultipleWritingList method, of class DAOFileWriter.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      * @throws java.io.IOException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
     @Test
-    public void testAddRowToMultipleWritingList() throws DAOFileException, IOException {
+    public void testAddRowToMultipleWritingList() throws DAOFileWriterException, IOException, DAOFileException {
         System.out.println("addRowToMultipleWritingList");
         Path filePath = rootDir.resolve("fileWriterAddRowToMultipleWritingList.test");
-        try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")) {
-            DAOFileWriter instance = new DAOFileWriter(raf.getChannel());
-            AbstractRow row = new IndexRow(0, new Index(UUID.randomUUID(), 250), 0);
-            boolean result = instance.addRowToMultipleWritingList(row);
-            boolean expectedResult = true;
-            assertEquals(expectedResult, result);
-        }
-        System.out.println(filePath.toFile().delete() ? "[OK] test file deleted  : "+filePath.toString() : "[NOK] ");
+        DAOFileWriter instance = new DAOFileWriter(filePath);
+        AbstractRow row = new IndexRow(0, new Index(UUID.randomUUID(), 250), 0);
+        boolean result = instance.addRowToMultipleWritingList(row);
+        boolean expectedResult = true;
+        assertEquals(expectedResult, result);
+        filePath.toFile().delete();
     }
 
     /**
      * Test of addRowToSingleWritingList method, of class DAOFileWriter.
+     *
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      * @throws java.io.IOException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      */
     @Test
-    public void testAddRowToSingleWritingList() throws DAOFileException, IOException {
+    public void testAddRowToSingleWritingList() throws DAOFileException, IOException, DAOFileWriterException {
         System.out.println("addRowToSingleWritingList");
         Path filePath = rootDir.resolve("fileWriterAddRowToSingleWritingList.test");
-        try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")) {
-            DAOFileWriter instance = new DAOFileWriter(raf.getChannel());
-            AbstractRow row = new IndexRow(12, new Index(UUID.randomUUID(), 250), 0);
-            boolean result = instance.addRowToSingleWritingList(row);
-            boolean expectedResult = true;
-            assertEquals(expectedResult, result);
-        }
-        System.out.println(filePath.toFile().delete() ? "[OK] test file deleted  : "+filePath.toString() : "[NOK] ");
+        DAOFileWriter instance = new DAOFileWriter(filePath);
+        AbstractRow row = new IndexRow(12, new Index(UUID.randomUUID(), 250), 0);
+        boolean result = instance.addRowToSingleWritingList(row);
+        boolean expectedResult = true;
+        assertEquals(expectedResult, result);
+        filePath.toFile().delete();
     }
     
     /**
      * Test of loadFileHeader method, of class DAOFileWriter.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      * @throws java.io.IOException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      */
     @Test
-    public void testLoadFileHeader() throws DAOFileException, IOException {
+    public void testLoadFileHeader() throws DAOFileException, IOException, DAOFileWriterException {
         System.out.println("loadFileHeader");
         Path filePath = rootDir.resolve("fileWriterLoadFileHeader.test");
-        try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")) {
-            FileChannel fc = raf.getChannel();
-            DAOFileWriter instance = new DAOFileWriter(fc);
-            
-            FileHeaderRow expResult1 = new FileHeaderRow(new FileHeader(0, 0));
-            FileHeaderRow result1 = instance.loadFileHeader();
-            assertEquals(expResult1, result1);
-            
-            ByteBuffer buffer = ByteBuffer.allocate(12);
-            buffer.putInt(0);
-            buffer.putInt(12);
-            buffer.putInt(13);
-            buffer.flip();
-            fc.position(0);
-            while(buffer.hasRemaining()) {
-                fc.write(buffer);
-            }
-            
-            System.out.println(instance.write(0, buffer));
-            FileHeaderRow expResult = new FileHeaderRow(new FileHeader(12, 13));
-            FileHeaderRow result = instance.loadFileHeader();
-            System.out.println(result);
-            assertEquals(expResult.getData(), result.getData());
-        }
-        System.out.println(filePath.toFile().delete() ? "[OK] test file deleted  : "+filePath.toString() : "[NOK] ");
+        DAOFileWriter instance = new DAOFileWriter(filePath);
+        
+        FileHeaderRow expResult1 = new FileHeaderRow(new FileHeader(0, 0));
+        FileHeaderRow result1 = instance.loadFileHeader();
+        assertEquals(expResult1, result1);
+        
+        FileHeaderRow expResult = new FileHeaderRow(new FileHeader(12, 13));
+        ByteBuffer buffer = ByteBuffer.allocate(FileHeaderRow.FILE_HEADER_ROW_SIZE);
+        expResult.write(buffer);
+//        instance.write(0, buffer);
+
+        instance.write(0, buffer);
+        FileHeaderRow result = instance.loadFileHeader();
+        assertEquals(expResult.getData(), result.getData());
+        filePath.toFile().delete();
     }
 
     /**
@@ -163,7 +145,7 @@ public class DAOFileWriterTest {
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
     @Test
-    public void testDeleteFromFile() throws DAOFileException {
+    public void testDeleteFromFile() throws DAOFileException, DAOFileWriterException {
         System.out.println("deleteFromFile");
         try {
             String str = "That is a deleting test on a file.";
@@ -181,7 +163,7 @@ public class DAOFileWriterTest {
         }
     }
 
-    private void deleteFromFileTest(String str, int position, int size, String expResult) throws DAOFileException, IOException {
+    private void deleteFromFileTest(String str, int position, int size, String expResult) throws DAOFileException, IOException, DAOFileWriterException {
         String result;
         Path filePath = rootDir.resolve("deleteFromFile.test");
         try (RandomAccessFile file = new RandomAccessFile(filePath.toString(), "rw")) {
@@ -193,7 +175,7 @@ public class DAOFileWriterTest {
                 fc.write(buff);
             }
 
-            DAOFileWriter instance = new DAOFileWriter(fc);
+            DAOFileWriter instance = new DAOFileWriter(filePath);
             instance.deleteFromFile(position, size);
 
             buff.clear();
@@ -204,18 +186,17 @@ public class DAOFileWriterTest {
             buff.get(b);
             result = new String(b);
         }
-        System.out.println(filePath.toFile().delete() ? "[OK] test file deleted  : "+filePath.toString() : "[NOK] ");
-//        filePath.toFile().delete();
+        filePath.toFile().delete();
         assertEquals(expResult, result);
     }
  
     /**
      * Test of writeUUID method, of class DAOFileWriter.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
-     * @throws ByteBufferException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      */
     @Test
-    public void testWriteUUID() throws DAOFileException, ByteBufferException {
+    public void testWriteUUID() throws DAOFileException, DAOFileWriterException {
         System.out.println("writeUUID");
         UUID uuidToWrite = UUID.randomUUID();
         int expResult = Long.BYTES * 2;
@@ -227,10 +208,10 @@ public class DAOFileWriterTest {
     /**
      * Test of writeString method, of class DAOFileWriter.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
-     * @throws ByteBufferException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      */
     @Test
-    public void testWriteString() throws DAOFileException, ByteBufferException {
+    public void testWriteString() throws DAOFileException, DAOFileWriterException {
         System.out.println("writeString");
         String stringToWrite = "This is the string to be writed in the buffer.";
         int expResult = Integer.BYTES + stringToWrite.length();
@@ -242,9 +223,10 @@ public class DAOFileWriterTest {
     /**
      * Test of readString method, of class DAOFileWriter.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      */
     @Test
-    public void testReadString_ByteBuffer() throws DAOFileException {
+    public void testReadString_ByteBuffer() throws DAOFileException, DAOFileWriterException {
         System.out.println("readString");
         ByteBuffer buffer = ByteBuffer.allocate(50);
         String str = "This is a test";
@@ -259,9 +241,10 @@ public class DAOFileWriterTest {
     /**
      * Test of readString method, of class DAOFileWriter.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      */
     @Test
-    public void testReadString_ByteBuffer_int() throws DAOFileException {
+    public void testReadString_ByteBuffer_int() throws DAOFileException, DAOFileWriterException {
         System.out.println("readString");
         ByteBuffer buffer = ByteBuffer.allocate(50);
         String str = "This is a test";

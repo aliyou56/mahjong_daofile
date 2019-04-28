@@ -1,9 +1,10 @@
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.daofile.exception.ByteBufferException;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -89,11 +90,13 @@ public class IndexRow extends AbstractRow<Index> {
      * @throws DAOFileException s'il y'a une errue lors de l'écriture.
      */
     @Override
-    protected void writeData(ByteBuffer buffer) throws DAOFileException {
+    protected int writeData(ByteBuffer buffer) throws DAOFileException {
         try {
+            int startPosition = buffer.position();
             DAOFileWriter.writeUUID(buffer, getData().getUUID());
             buffer.putLong(getData().getPointer());
-        } catch (ByteBufferException ex) {
+            return buffer.position() - startPosition;
+        } catch (DAOFileWriterException ex) {
             throw new DAOFileException(ex.getMessage(), ex);
         }
     }

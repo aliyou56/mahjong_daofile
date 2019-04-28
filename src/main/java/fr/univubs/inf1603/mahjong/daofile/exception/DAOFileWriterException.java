@@ -4,16 +4,15 @@ package fr.univubs.inf1603.mahjong.daofile.exception;
 /**
  *
  * @author aliyou
- * @version 1.1.0
  */
-public class ByteBufferException extends Exception {
+public class DAOFileWriterException extends Exception {
     
     /**
      * Constructeur avec le message d'erreur.
      *
      * @param message Message d'erreur.
      */
-    public ByteBufferException(String message) {
+    public DAOFileWriterException(String message) {
         super(message);
     }
 
@@ -22,7 +21,7 @@ public class ByteBufferException extends Exception {
      *
      * @param throwable Cause de l'erreur.
      */
-    public ByteBufferException(Throwable throwable) {
+    public DAOFileWriterException(Throwable throwable) {
         super(throwable);
     }
 
@@ -32,7 +31,7 @@ public class ByteBufferException extends Exception {
      * @param message Message de l'erreur.
      * @param throwable Cause de l'erreur.
      */
-    public ByteBufferException(String message, Throwable throwable) {
+    public DAOFileWriterException(String message, Throwable throwable) {
         super(message, throwable);
     }
 }

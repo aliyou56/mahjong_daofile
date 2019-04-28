@@ -1,8 +1,11 @@
 
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.engine.persistence.MahjongObservable;
 import java.beans.PropertyChangeSupport;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Cette classe répresente une en-tete de fichier. Elle est composée du nombre
@@ -10,77 +13,122 @@ import java.beans.PropertyChangeSupport;
  * fichier.
  * 
  * @author aliyou
- * @version 1.1.0
+ * @version 1.2
  */
 public class FileHeader implements MahjongObservable {
 
+    /**
+     * Logging
+     */
+    private static final Logger LOGGER = Logger.getLogger(FileHeader.class.getName());
+    
     /**
      * Support d'écoute
      */
     private final PropertyChangeSupport pcs;
 
     /**
-     * Nombre total de tuple dans le fichier
+     * Nombre total de tuple dans un fichier
      */
     private int rowNumber;
     /**
-     * Identifiant du dernier tuple dans le fichier
+     * Identifiant du dernier tuple d'un fichier
      */
-    private int nextRowID;
+    private int lastRowID;
 
     /**
-     * Constructeur avec le nombre total de tuples <code>rowNumber</code> et le
-     * prochain identifiant de tuple <code>nextRowID</code>.
+     * Constructeur avec le nombre total de tuples <code>rowNumber</code> et un
+     * identifiant du dernier tuple <code>lastRowID</code>.
      *
      * @param rowNumber Nombre total de tuples dans un fichier.
-     * @param nextRowID Prochain identifiant de tuple.
+     * @param lastRowID Identifiant du dernier tuple d'un fichier.
      */
-    public FileHeader(int rowNumber, int nextRowID) {
+    public FileHeader(int rowNumber, int lastRowID) {
         this.rowNumber = rowNumber;
-        this.nextRowID = nextRowID < 1 ? 1 : nextRowID;
+        this.lastRowID = lastRowID;
         this.pcs = new PropertyChangeSupport(this);
     }
 
     /**
-     * Rétourne le nombre total de tuples dans un fichier.
-     *
      * @return Nombre total de tuples dans un fichier.
      */
     synchronized public int getRowNumber() {
-        return rowNumber;
+        return this.rowNumber;
     }
 
     /**
+     * Modifie la valeur du nombre total de tuples dans un fichier.
+     * 
+     * @param rowNumber Nouvelle valeur.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * si la nouvelle valeur du nombre total de tuples dans un fichier est négative.
+     */
+    synchronized public void setRowNumber(int rowNumber) throws DAOFileException {
+        if(rowNumber < 0) {
+            String message = "rowNumber didin't chnged."
+                    + "\n\t cause -> newRowNumber '"+rowNumber+"' is less than 0.";
+            throw new DAOFileException(message);
+        }
+        if (this.rowNumber != rowNumber) {
+            int oldValue = this.rowNumber;
+            int newValue = rowNumber;
+            this.rowNumber = rowNumber;
+            if (rowNumber == 0) {
+                lastRowID = 0;
+            }
+            this.pcs.firePropertyChange("rowNumber", oldValue, newValue);
+        }
+    }
+    
+    /**
+     * @return Identifiant du dernier tuple d'un fichier.
+     */
+    synchronized public int getLastRowID() {
+        return this.lastRowID;
+    }
+    
+    synchronized private void setLastRowID(int lastRowID) {
+        if(this.lastRowID != lastRowID) {
+            int oldValue = this.lastRowID;
+            int newValue = lastRowID;
+            this.lastRowID = lastRowID;
+            this.pcs.firePropertyChange("lastRowID", oldValue, newValue);
+        }
+    }
+    
+    /**
      * Rétourne le prochain identifiant de tuple.
+     * Incremente la valeur de l'identifiant du dernier tuple d'un fichier {@code lastRowID}.
      *
      * @return Prochain identifiant de tuple.
      */
     synchronized public int getNextRowID() {
-        this.nextRowID += 1;
-        this.pcs.firePropertyChange("rowLastId", this.nextRowID - 1, this.nextRowID);
-        return nextRowID - 1;
+        setLastRowID(getLastRowID() + 1);
+        return getLastRowID();
     }
 
     /**
      * Incrémente le valeur du nombre total de tuple dans le fichier
      */
     synchronized public void incrementRowNumber() {
-        increment(1);
+        try {
+            setRowNumber(getRowNumber() + 1);
+        } catch (DAOFileException ex) { // should never come.
+            LOGGER.log(Level.WARNING, ex.getMessage());
+        }
     }
 
     /**
      * Décrémente le valeur du nombre total de tuple dans le fichier
      */
     synchronized public void decrementRowNumber() {
-        increment(-1);
-        if (rowNumber == 0) {
-            nextRowID = 0;
+        if(getRowNumber() > 0) {
+            try {
+                setRowNumber(getRowNumber() - 1);
+            } catch (DAOFileException ex) { // should never come.
+                LOGGER.log(Level.WARNING, ex.getMessage());
+            }
         }
-    }
-
-    private synchronized void increment(int i) {
-        this.rowNumber += i;
-        this.pcs.firePropertyChange("rowNumber", this.rowNumber - 1, this.rowNumber);
     }
 
     /**
@@ -98,14 +146,14 @@ public class FileHeader implements MahjongObservable {
      */
     @Override
     public String toString() {
-        return "FileHeader {" + "rowNumber=" + rowNumber + ", nextRowID=" + nextRowID + '}';
+        return "FileHeader {" + "rowNumber=" + rowNumber + ", lastRowID=" + lastRowID + '}';
     }
 
     @Override
     public int hashCode() {
         int hash = 7;
         hash = 79 * hash + this.rowNumber;
-        hash = 79 * hash + this.nextRowID;
+        hash = 79 * hash + this.lastRowID;
         return hash;
     }
 
@@ -124,7 +172,7 @@ public class FileHeader implements MahjongObservable {
         if (this.rowNumber != other.rowNumber) {
             return false;
         }
-        if (this.nextRowID != other.nextRowID) {
+        if (this.lastRowID != other.lastRowID) {
             return false;
         }
         return true;

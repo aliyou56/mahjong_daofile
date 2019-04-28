@@ -13,7 +13,7 @@ import java.util.logging.Logger;
  * Elle regroupe les algorithmes communs aux tuples.
  *
  * @author aliyou, nesrine
- * @version  1.1.0
+ * @version 1.1.0
  */
 public class RowUtilities {
 
@@ -34,19 +34,20 @@ public class RowUtilities {
      * tuple. NE DOIT PAS ETRE NULLE.
      * @param rowPointer Pointeur de tuple de reference.
      * @param offset Offset à enlever aux pointeurs de tuple.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les parametres fournis ne sont pas acceptés.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
+     * les parametres fournis ne sont pas acceptés.
      */
     public static void updateRowsPointer(List<? extends AbstractRow> sortedListByPointer, long rowPointer, int offset) throws DAOFileException {
         FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
         int position = getRowPositionFormSortedListByPointer(sortedListByPointer, rowPointer);
-        LOGGER.log(Level.INFO, "** RowUtilities.updateRowsPointer : " 
+        LOGGER.log(Level.FINE, "** RowUtilities.updateRowsPointer : "
                 + "\n\t pointer  : {0}"
-                + "\n\t offset   : {1}" 
-                + "\n\t listSize : {2}" 
-                + "\n\t position : {3}", 
+                + "\n\t offset   : {1}"
+                + "\n\t listSize : {2}"
+                + "\n\t position : {3}",
                 new Object[]{rowPointer, offset, sortedListByPointer.size(), position});
         if (!sortedListByPointer.isEmpty()) {
-            LOGGER.log(Level.INFO, print("\t before   : ", sortedListByPointer));
+            LOGGER.log(Level.FINE, print("\t before   : ", sortedListByPointer));
             AbstractRow rowAtPosition = sortedListByPointer.get(position);
 //            System.out.println("\n\t type     : " + rowAtPosition.getData().getClass().getSimpleName());
             if (rowAtPosition.getRowPointer() < rowPointer) {
@@ -63,21 +64,22 @@ public class RowUtilities {
                             new Object[]{nextRow, oldPointer, newPointer, offset});
                 }
             }
-            LOGGER.log(Level.INFO, print("\t after    : ", sortedListByPointer));
+            LOGGER.log(Level.FINE, print("\t after    : ", sortedListByPointer));
         }
     }
-    
+
     /**
      * just for test
+     *
      * @param name
      * @param list
-     * @return 
+     * @return
      */
     static private String print(String name, List<? extends AbstractRow> list) {
         StringBuilder result = new StringBuilder();
         result.append(name);
         list.forEach((ar) -> {
-                result.append(ar.getRowPointer()).append(", ");
+            result.append(ar.getRowPointer()).append(", ");
         });
         result.append("\n");
         return result.toString();
@@ -94,7 +96,8 @@ public class RowUtilities {
      * @param rowPointer Pointeur du tuple à retrouver.
      * @return Le tuple ayant comme pointeur {@code rowPointer} s'il existe dans
      * la liste sinon {@code null}.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les parametres fournis ne sont pas acceptés.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
+     * les parametres fournis ne sont pas acceptés.
      */
     public static AbstractRow getRowFromSortedListByPointer(List<? extends AbstractRow> sortedListByPointer, long rowPointer) throws DAOFileException {
         FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
@@ -116,7 +119,8 @@ public class RowUtilities {
      * @param sortedListByPointer Liste de tuples triée suivant les pointeurs de
      * tuple. NE DOIT PAS ETRE NULLE.
      * @param newRow Nouveau tuple à rajouter. NE DOIT PAS ETRE NULL.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les parametres fournis ne sont pas acceptés.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
+     * les parametres fournis ne sont pas acceptés.
      */
     public static void addRowToSortedListByPointer(List<AbstractRow> sortedListByPointer, AbstractRow newRow) throws DAOFileException {
         FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
@@ -146,7 +150,8 @@ public class RowUtilities {
      * @param sortedListByUUID Liste de tuples triée suivant l'identifiant des
      * objets encapsulés dans les tuples. NE DOIT PAS ETRE NULLE.
      * @param newRow Nouveau tuple à rajouter. NE DOIT PAS ETRE NULL.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les parametres fournis ne sont pas acceptés.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
+     * les parametres fournis ne sont pas acceptés.
      */
     public static void addRowToSortedListByUUID(List<AbstractRow> sortedListByUUID, AbstractRow newRow) throws DAOFileException {
         FileDAOUtilities.checkNotNull("sortedListByUUID", sortedListByUUID);
@@ -183,7 +188,8 @@ public class RowUtilities {
      * tuple. NE DOIT PAS ETRE NULLE.
      * @param rowPointer Pointeur du tuple dont la position est recherchée.
      * @return Position d'un tuple dans une liste de tuples.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les parametres fournis ne sont pas acceptés.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
+     * les parametres fournis ne sont pas acceptés.
      */
     public static int getRowPositionFormSortedListByPointer(List<? extends AbstractRow> sortedListByPointer, long rowPointer) throws DAOFileException {
         FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
@@ -217,7 +223,8 @@ public class RowUtilities {
      * @param dataID Identifiant de l'objet encapsulé dans un tuple. NE DOIT PAS
      * ETRE NULL.
      * @return Position d'un tuple dans une liste de tuples.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si les parametres fournis ne sont pas acceptés.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
+     * les parametres fournis ne sont pas acceptés.
      */
     public static int getRowPositionFromSortedListByUUID(List<? extends AbstractRow> sortedListByUUID, UUID dataID) throws DAOFileException {
         FileDAOUtilities.checkNotNull("sortedListByUUID", sortedListByUUID);

@@ -35,10 +35,23 @@ public class FileHeaderTest {
      * Test of getNextRowID method, of class FileHeader.
      */
     @Test
+    public void testGetLastRowID() {
+        System.out.println("getLastRowID");
+        int lastRowID = 11;
+        FileHeader instance = new FileHeader(10, lastRowID);
+        int result = instance.getLastRowID();
+        assertEquals(lastRowID, result);
+    }
+    
+    /**
+     * Test of getNextRowID method, of class FileHeader.
+     */
+    @Test
     public void testGetNextRowID() {
         System.out.println("getNextRowID");
-        FileHeader instance = new FileHeader(10, 11);
-        int expResult = 11;
+        int lastRowID = 11;
+        FileHeader instance = new FileHeader(10, lastRowID);
+        int expResult = lastRowID + 1;
         int result = instance.getNextRowID();
         assertEquals(expResult, result);
     }

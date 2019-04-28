@@ -1,19 +1,21 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.daofile.filemanagement.AbstractRow;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.LinkManager;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.DataRow;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.DAOFileWriter;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
-import fr.univubs.inf1603.mahjong.daofile.exception.ByteBufferException;
+import static fr.univubs.inf1603.mahjong.daofile.MahjongUtilities.getWind;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import fr.univubs.inf1603.mahjong.engine.game.GameTile;
+import fr.univubs.inf1603.mahjong.engine.game.GameTileInterface;
 import fr.univubs.inf1603.mahjong.engine.rule.AbstractTile;
 import fr.univubs.inf1603.mahjong.engine.rule.CommonTile;
 import fr.univubs.inf1603.mahjong.engine.rule.FlowerTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SeasonTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SimpleHonor;
 import fr.univubs.inf1603.mahjong.engine.rule.SuperiorHonor;
+import fr.univubs.inf1603.mahjong.engine.rule.Wind;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -27,7 +29,7 @@ import java.util.logging.Logger;
  * @author aliyou, nesrine
  * @version 1.1.0
  */
-public class FileTileDAO extends FileDAOMahjong<GameTile> {
+public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
 
     /**
      * Logging
@@ -37,7 +39,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
     /**
      * Gestionnaire de liens entre les tuiles et les zones.
      */
-    private static LinkManager<GameTile> tileToZoneLinkManager;
+    private static LinkManager<GameTileInterface> tileToZoneLinkManager;
 
     /**
      * Constructeur avec un Chemin d'accès du répertoire racine
@@ -49,7 +51,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
      */
     FileTileDAO(Path rootDirPath) throws DAOFileException {
         super(rootDirPath, "tile.data", "tile.index", TileRow.TILE_ROW_SIZE);
-        System.out.println(" -> FileTileDAO");
+//        System.out.println(" -> FileTileDAO");
     }
 
     /**
@@ -57,7 +59,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
      *
      * @param tileToZoneLinkManager Gestionnaire de liens.
      */
-    void setLinkManager(LinkManager<GameTile> tileToZoneLinkManager) {
+    void setLinkManager(LinkManager<GameTileInterface> tileToZoneLinkManager) {
         if (FileTileDAO.tileToZoneLinkManager == null) {
             FileTileDAO.tileToZoneLinkManager = tileToZoneLinkManager;
         }
@@ -67,7 +69,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
      * {@inheritDoc}
      */
     @Override
-    protected AbstractRow getDataRow(int rowID, GameTile tile, long rowPointer)throws DAOFileException {
+    protected DataRow getDataRow(int rowID, GameTileInterface tile, long rowPointer) throws DAOFileException {
         return new TileRow(rowID, tile, rowPointer);
     }
 
@@ -75,24 +77,25 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
      * {@inheritDoc}
      */
     @Override
-    protected AbstractRow getDataRow(DAOFileWriter writer, long pointer) throws DAOFileException {
+    protected DataRow getDataRow(DAOFileWriter writer, long pointer) throws DAOFileException {
         return new TileRow(writer, pointer);
     }
 
     /**
-     * Supprime une tuile <code>gameTile</code> du fichier de données si la
+     * Supprime une tuile <code>GameTile</code> du fichier de données si la
      * tuile n'est reliée à aucune zone <code>TileZone</code>.
      *
      * @param gameTile Tuile à supprimer.
      * @throws DAOException s'il y'a une erreur lors de la suppression.
      */
     @Override
-    protected void deleteFromPersistance(GameTile gameTile) throws DAOException {
+    protected void deleteFromPersistance(GameTileInterface gameTile) throws DAOException {
         try {
             // on vérifie si la tuile n'est pas reliée à une zone
             if (tileToZoneLinkManager.getRow(gameTile.getUUID()) == null) {
                 if (super.removeDataRow(gameTile.getUUID())) {
-                    LOGGER.log(Level.INFO, "[INFO] {0} id={1} deleted from persistance", new Object[]{gameTile.getClass().getSimpleName(), gameTile.getUUID()});
+                    LOGGER.log(Level.INFO, "[INFO] {0} id={1} deleted from persistance",
+                            new Object[]{gameTile.getClass().getSimpleName(), gameTile.getUUID()});
                 }
             } else {
                 LOGGER.log(Level.INFO, "GameTile id={0} canno't be deleted cause it is linked to a zone", gameTile.getUUID());
@@ -108,24 +111,24 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
      *
      * <pre>
      *
-     *      Format d'une tuile dans  un tuple de tuile dans le fichier de données :
+     *      Format d'une tuile dans  un tuple :
      *
-     *          UUID=16    |        String=3      |   int=4   |    byte=1     |        int=4        | -> (Byte)
-     *          tileID     | tileClassShortenName |   gameID  |  wind/dragon  | number (commonTile) |
-     *   ex :       -      | cop/suh/sih/flt/sep  |     -     | e/s/w/n r/g/w |         [1-9]       |
+     *       UUID=16 |        String=3      | int=4  |      byte=1      |   byte=1   |    byte=1     |       int=4         | -> (Byte)
+     *       tileID  | tileClassShortenName | gameID | publicalyVisible | orientation|  wind/dragon  | number (commonTile) |
+     * ex :     -    | cop/suh/sih/flt/sep  |   -    |        true      |  e/s/w/n   | e/s/w/n r/g/w |       [1-9]         |
      * </pre>
      *
      */
-    class TileRow extends DataRow<GameTile> {
+    class TileRow extends DataRow<GameTileInterface> {
 
         /**
          * Taille minimale d'une tuile en octet.
          * <pre>
-         *          UUID=16    |        String=3      |   int=4   |    byte=1   -> (Byte)
-         *          tileID     | tileClassShortenName |   gameID  |  wind/dragon
+         *       UUID=16 |        String=3      |  int=4 |       byte=1      |  byte=1    |    byte=1    | -> (Byte)
+         *       tileID  | tileClassShortenName | gameID |  publicalyVisible | orientation|  wind/dragon |
          * </pre>
          */
-        private static final int TILE_MIN_SIZE = 16 + 3 + 4 + 1;           // 24
+        private static final int TILE_MIN_SIZE = 16 + 3 + 4 + 1 + 1 + 1;    // 26
         /**
          * Taille maximale d'une tuile en octet.
          * <pre>
@@ -133,11 +136,11 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
          *     + ->    |  number (commonTile)  |
          * </pre>
          */
-        private static final int TILE_MAX_SIZE = TILE_MIN_SIZE + 4;        // 28
+        private static final int TILE_MAX_SIZE = TILE_MIN_SIZE + 4;        // 30
         /**
          * Taille d'un tuple de tuile.
          */
-        static final int TILE_ROW_SIZE = ROW_HEADER_SIZE + TILE_MAX_SIZE;  // 32
+        static final int TILE_ROW_SIZE = ROW_HEADER_SIZE + TILE_MAX_SIZE;  // 34
 
         /**
          * Constructeur avec un identifiant de tuple <code>rowID</code>, une
@@ -148,7 +151,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
          * @param data Tuile à encapsuler dans un tuple.
          * @param rowPointer Pointeur d'un tuple.
          */
-        TileRow(int rowID, GameTile data, long rowPointer) throws DAOFileException {
+        TileRow(int rowID, GameTileInterface data, long rowPointer) throws DAOFileException {
             super(rowID, data, TILE_MAX_SIZE, rowPointer);
         }
 
@@ -160,7 +163,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
          * @param writer Processus qui éffectue des opérations d'entrée/sortie
          * sur un fichier.
          * @param rowPointer Pointeur d'un tuple.
-         * @throws DAOException s'il y'a une erruer lors de la lecture d'une
+         * @throws DAOFileException s'il y'a une erruer lors de la lecture d'une
          * tuile <code>GameTile</code>.
          */
         TileRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
@@ -175,51 +178,85 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
          * <code>GameTile</code> est lue.
          */
         @Override
-        protected GameTile readData(ByteBuffer buffer) throws DAOFileException {
-            UUID tileID = new UUID(buffer.getLong(), buffer.getLong());
-            AbstractTile abstractTile = null;
-            String type = DAOFileWriter.readString(buffer, 3);
-            int gameID = buffer.getInt();
-            char c = (char) buffer.get();
-            switch (TileClassSimpleName.getTileClassSimpleName(type)) {
-                case COMMONTILE:
-                    abstractTile = new CommonTile(MahjongUtilities.getFamily(c), MahjongUtilities.getNumber(buffer.getInt()));
-                    break;
-                case SUPERIORHONOR:
-                    abstractTile = new SuperiorHonor(MahjongUtilities.getDragon(c));
-                    break;
-                case SIMPLEHONOR:
-                    abstractTile = new SimpleHonor(MahjongUtilities.getWind(c));
-                    break;
-                case FLOWERTILE:
-                    abstractTile = new FlowerTile(MahjongUtilities.getFlower(MahjongUtilities.getWind(c)));
-                    break;
-                case SEASONTILE:
-                    abstractTile = new SeasonTile(MahjongUtilities.getSeason(MahjongUtilities.getWind(c)));
-                    break;
+        protected GameTileInterface readData(ByteBuffer buffer) throws DAOFileException {
+            try {
+                //            if (buffer.remaining() >= TILE_MIN_SIZE - 1) {
+                UUID tileID = new UUID(buffer.getLong(), buffer.getLong());
+                AbstractTile abstractTile = null;
+                String type = DAOFileWriter.readString(buffer, 3);
+                int gameID = buffer.getInt();
+                boolean isPublicalyVisible = (buffer.get() == 1);
+                Wind orientation = getWind((char) buffer.get());
+                char c = (char) buffer.get();
+                switch (TileClassSimpleName.getTileClassSimpleName(type)) {
+                    case COMMONTILE:
+                        abstractTile = new CommonTile(MahjongUtilities.getFamily(c), MahjongUtilities.getNumber(buffer.getInt()));
+                        break;
+                    case SUPERIORHONOR:
+                        abstractTile = new SuperiorHonor(MahjongUtilities.getDragon(c));
+                        break;
+                    case SIMPLEHONOR:
+                        abstractTile = new SimpleHonor(MahjongUtilities.getWind(c));
+                        break;
+                    case FLOWERTILE:
+                        abstractTile = new FlowerTile(MahjongUtilities.getFlower(MahjongUtilities.getWind(c)));
+                        break;
+                    case SEASONTILE:
+                        abstractTile = new SeasonTile(MahjongUtilities.getSeason(MahjongUtilities.getWind(c)));
+                        break;
+                }
+                GameTileInterface data = new GameTile(gameID, abstractTile, tileID, isPublicalyVisible, orientation);
+                return data;
+//            } else {
+//                throw new DAOFileException("Impossible de lire une tuile à partir de ce tampon : " +buffer);
+//            }
+            } catch (DAOFileWriterException ex) {
+                throw new DAOFileException(ex.getMessage(), ex);
             }
-            GameTile data = new GameTile(gameID, abstractTile, tileID);
-            return data;
         }
 
         /**
          * Ecrit une tuile dans un tampon d'octet <code>buffer</code>.
          *
-         * @param buffer Tampon d'octet.
+         * @param buffer Tampon d'octet dans lequel la tuile est écrite.
          */
         @Override
-        protected void writeData(ByteBuffer buffer) throws DAOFileException {
+        protected int writeData(ByteBuffer buffer) throws DAOFileException {
+            if (buffer.remaining() < TILE_MAX_SIZE - 1) {
+                String message = "GameTile '" + getData() + "' can't be writed in this buffer '" + buffer + "'"
+                        + "\n\t cause -> Remaining bytes '" + buffer.remaining() + "' is not enought.";
+                LOGGER.log(Level.SEVERE, message);
+                throw new DAOFileException(message);
+            }
+            int stratPosition = buffer.position();
+            GameTile tile = (GameTile) getData();
+            UUID tileID = tile.getUUID();
+            AbstractTile abstractTile = getData().getTile();
+            TileClassSimpleName tileClassSimpleName = TileClassSimpleName.valueOf(abstractTile.getClass().getSimpleName().toUpperCase());
+            int gameID = getData().getGameID();
+            boolean isPubliclyVisible = tile.isPubliclyVisible();
+            Wind orientation = tile.getOrientation();
+
+//            LOGGER.log(Level.INFO, " GameTileInterface "
+//                              + "\n tileID              : {0} "
+//                              + "\n tileClassSimpleName : {1}" 
+//                              + "\n gameID              : {2}"
+//                              + "\n isPubliclyVisible   : {3}"
+//                              + "\n orientation         : {4}", 
+//                    new Object[]{tileID, tileClassSimpleName, gameID, isPubliclyVisible, orientation});
             try {
-                DAOFileWriter.writeUUID(buffer, getData().getUUID());
-                AbstractTile abstractTile = getData().getTile();
-                TileClassSimpleName tileClassSimpleName = TileClassSimpleName.valueOf(abstractTile.getClass().getSimpleName().toUpperCase());
+                DAOFileWriter.writeUUID(buffer, tileID);
                 buffer.put(tileClassSimpleName.getShortenName().getBytes());
-                buffer.putInt(getData().getGameID());
+                buffer.putInt(gameID);
+                buffer.put(isPubliclyVisible ? (byte) 1 : (byte) 0);
+                buffer.put((byte) orientation.getSymbol());
                 switch (tileClassSimpleName) {
                     case COMMONTILE:
                         CommonTile commonTile = (CommonTile) abstractTile;
                         buffer.put((byte) commonTile.getFamily().getSymbol());             // 1 Byte
-                        buffer.putInt(commonTile.getNumber().getValue());                  // 4 Bytes
+                        int value = commonTile.getNumber().getValue();
+//                    System.out.println("value   : " +value);
+                        buffer.putInt(value);                  // 4 Bytes
                         break;
                     case SUPERIORHONOR:
                         SuperiorHonor superiorHonor = (SuperiorHonor) abstractTile;
@@ -232,18 +269,17 @@ public class FileTileDAO extends FileDAOMahjong<GameTile> {
                     case FLOWERTILE:
                         FlowerTile flowerTile = (FlowerTile) abstractTile;
                         char symbol = flowerTile.getFlower().getWind().getSymbol();
-//                    System.out.println("flower wind symbol : " + symbol);
                         buffer.put((byte) symbol);   // 1 Byte
                         break;
                     case SEASONTILE:
                         SeasonTile seasonTile = (SeasonTile) abstractTile;
                         char symbol1 = seasonTile.getSeason().getWind().getSymbol();
-//                    System.out.println("season wind symbol : " + symbol1);
                         buffer.put((byte) symbol1);   // 1 Byte
                         break;
                 }
                 indexManager.addIndex(getIndex());
-            } catch (ByteBufferException ex) {
+                return buffer.position() - stratPosition;
+            } catch (DAOFileWriterException ex) {
                 throw new DAOFileException(ex.getMessage(), ex);
             }
         }
