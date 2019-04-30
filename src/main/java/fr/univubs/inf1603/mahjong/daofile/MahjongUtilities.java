@@ -1,15 +1,11 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.engine.rule.CommonTile;
 import fr.univubs.inf1603.mahjong.engine.rule.FlowerTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SeasonTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SuperiorHonor;
-import fr.univubs.inf1603.mahjong.engine.rule.Wind;
+import fr.univubs.inf1603.mahjong.Wind;
 
 /**
  *

@@ -6,7 +6,6 @@ import fr.univubs.inf1603.mahjong.engine.game.GameTile;
 import fr.univubs.inf1603.mahjong.engine.persistence.MahjongObservable;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import fr.univubs.inf1603.mahjong.engine.rule.CommonTile;
-import fr.univubs.inf1603.mahjong.engine.rule.Wind;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 import org.junit.AfterClass;

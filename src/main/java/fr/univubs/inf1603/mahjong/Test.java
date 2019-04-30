@@ -27,7 +27,6 @@ import fr.univubs.inf1603.mahjong.engine.rule.RulesException;
 import fr.univubs.inf1603.mahjong.engine.rule.SeasonTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SimpleHonor;
 import fr.univubs.inf1603.mahjong.engine.rule.SuperiorHonor;
-import fr.univubs.inf1603.mahjong.engine.rule.Wind;
 import fr.univubs.inf1603.mahjong.sapi.Difficulty;
 import java.nio.ByteBuffer;
 import java.time.Duration;

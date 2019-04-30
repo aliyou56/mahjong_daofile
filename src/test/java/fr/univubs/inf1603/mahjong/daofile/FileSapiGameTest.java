@@ -1,5 +1,6 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
+import fr.univubs.inf1603.mahjong.Wind;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
 import fr.univubs.inf1603.mahjong.engine.game.GameException;
@@ -11,7 +12,6 @@ import fr.univubs.inf1603.mahjong.engine.game.TileZoneIdentifier;
 import fr.univubs.inf1603.mahjong.engine.rule.GameRule;
 import fr.univubs.inf1603.mahjong.engine.rule.GameRuleFactory;
 import fr.univubs.inf1603.mahjong.engine.rule.RulesException;
-import fr.univubs.inf1603.mahjong.engine.rule.Wind;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.UUID;

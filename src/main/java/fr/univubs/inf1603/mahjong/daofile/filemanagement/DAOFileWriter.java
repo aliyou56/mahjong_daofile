@@ -50,7 +50,7 @@ public class DAOFileWriter implements PropertyChangeListener {
     /**
      * Fichier
      */
-    private RandomAccessFile file;
+//    private RandomAccessFile file;
 
     /**
      * Liste de tuples qui sont écrits d'un seul coup (liste de tuples ordonnés
@@ -84,11 +84,14 @@ public class DAOFileWriter implements PropertyChangeListener {
         try {
             checkNotNull("filePath", filePath);
             this.filePath = filePath;
-            this.file = new RandomAccessFile(filePath.toFile(), "rw");
+            if(!this.filePath.toFile().exists()) {
+                this.filePath.toFile().createNewFile();
+            }
+//            this.file = new RandomAccessFile(filePath.toFile(), "rw");
             this.multipleWritingList = new ArrayList<>();
             this.singleWritingList = new ArrayList<>();
-        } catch (FileNotFoundException ex) { // must never come because file is open with rw mode.
-            throw new DAOFileWriterException("File not found : " + filePath);
+        } catch (IOException ex) { // must never come because file is open with rw mode.
+            throw new DAOFileWriterException("IO error : " + filePath);
         }
     }
 
@@ -106,31 +109,36 @@ public class DAOFileWriter implements PropertyChangeListener {
             fhr = new FileHeaderRow(this);
             LOGGER.log(Level.INFO, "File header <{0}> successfully loaded from the file -> {1}",
                     new Object[]{fhr.getData(), this.filePath});
-        } catch (DAOFileException de) {
+        } catch (DAOFileException dfe) {
             fhr = new FileHeaderRow(new FileHeader(0, 0));
             LOGGER.log(Level.INFO, "New file header has been created."
                     + "\n\t cause -> File header could not be loaded from the file -> {0}"
                     + "\n\t\t cause -> {1}",
-                     new Object[]{this.filePath, de.getMessage()});
+                     new Object[]{this.filePath, dfe.getMessage()});
         }
         fhr.addPropertyChangeListener(this);
         return fhr;
     }
 
-    private void openIfClosed() throws FileNotFoundException { 
-        if (!this.file.getChannel().isOpen()) {
-            System.out.println("**open");
-            this.file = new RandomAccessFile(filePath.toFile(), "rw");
-        }
-    }
+//    private void openIfClosed() throws FileNotFoundException { 
+//        if (!this.file.getChannel().isOpen()) {
+//            System.out.println("**open");
+//            this.file = new RandomAccessFile(filePath.toFile(), "rw");
+//        }
+//    }
 
     public long getFileLenght() throws DAOFileWriterException{
-        try {
-            openIfClosed();
-            return this.file.length();
+//        try {
+//            openIfClosed();
+        try (RandomAccessFile raf = new RandomAccessFile(this.filePath.toFile(), "rw")) {
+            return raf.length();
         } catch (IOException ex) {
             throw new DAOFileWriterException(ex.getMessage(), ex);
         }
+//            return this.file.length();
+//        } catch (IOException ex) {
+//            throw new DAOFileWriterException(ex.getMessage(), ex);
+//        }
     }
 
     /**
@@ -155,16 +163,17 @@ public class DAOFileWriter implements PropertyChangeListener {
         if (lenght < 0) {
             throw new IllegalArgumentException(" lenght '" + lenght + "' must be greater than zero.");
         }
-        try {
-//        try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")){
-            openIfClosed();
-            if (position > file.length()) {
-//            if (position > raf.length()) {
+//        try {
+        try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")){
+//            openIfClosed();
+//            if (position > file.length()) {
+            if (position > raf.length()) {
                 throw new DAOFileWriterException("Couldn't read '" + lenght + "' bytes at the position '" 
                         + position + "' from the file '" + filePath + "'"
-                        + "\n\t\t cause -> position '" + position + "' is greater than file size '" + file.length() + "'");
+                        + "\n\t\t cause -> position '" + position + "' is greater than file size '" + getFileLenght() + "'");
             }
-            FileChannel fileChannel = file.getChannel();
+//            FileChannel fileChannel = file.getChannel();
+            FileChannel fileChannel = raf.getChannel();
             fileChannel.position(position);
             ByteBuffer buffer = ByteBuffer.allocate(lenght);
             if (fileChannel.read(buffer) != -1) {
@@ -196,23 +205,25 @@ public class DAOFileWriter implements PropertyChangeListener {
     synchronized public int write(long position, ByteBuffer buffer) throws DAOFileWriterException {
         checkNotNull("buffer", buffer);
         if (position >= 0) {
-            try {
-                openIfClosed();
-                FileChannel fileChannel = file.getChannel();
+//            try {
+            try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")){
+//                openIfClosed();
+//                FileChannel fileChannel = file.getChannel();
+                FileChannel fileChannel = raf.getChannel();
                 buffer.flip();
-                FileLock fileLock = fileChannel.lock(position, buffer.capacity(), false);
-                if (fileLock != null) {
+//                FileLock fileLock = fileChannel.lock(position, buffer.capacity(), false);
+//                if (fileLock != null) {
                     fileChannel.position(position);
                     while (buffer.hasRemaining()) {
                         fileChannel.write(buffer);
                     }
-                    fileLock.release();
+//                    fileLock.release();
                     return (int) (buffer.position() - position);
-                } else {
-                    LOGGER.log(Level.WARNING, " **** can't have lock");
-                }
+//                } else {
+//                    LOGGER.log(Level.WARNING, " **** can't have lock");
+//                }
             } catch (IOException ex) {
-                Thread.interrupted();
+//                Thread.interrupted();
                 String message = " Couldn't write the buffer '"+ buffer+"' at the position '"+position+"' "
                         + " \n\t cause -> IO error occurs : " +ex.getMessage();
 //                if (!this.file.getChannel().isOpen()) {
@@ -366,10 +377,11 @@ public class DAOFileWriter implements PropertyChangeListener {
         }
         LOGGER.log(Level.FINE, "position={0}, size={1}", new Object[]{position, offset});
         boolean result = false;
-//        try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")){
-        try {
-            openIfClosed();
-            FileChannel fileChannel = file.getChannel();
+        try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")){
+//        try {
+//            openIfClosed();
+//            FileChannel fileChannel = file.getChannel();
+            FileChannel fileChannel = raf.getChannel();
             long fileSize = fileChannel.size();
             if (fileChannel.size() > position) {
                 int nextPosition = position + offset;
@@ -414,9 +426,9 @@ public class DAOFileWriter implements PropertyChangeListener {
         checkNotNull("buffer", buffer);
         checkNotNull("uuidToWrite", uuidToWrite);
         int lenght = Long.BYTES * 2;
-        if ((buffer.remaining()) < lenght) {
+        if (buffer.remaining() < lenght) {
             String message = "\n UUID '" + uuidToWrite + "' can not be added to the buffer '" + buffer + "'"
-                    + "\n\t cause -> remaining bytes in the buffer is less than UUID size '" + lenght + "'";
+                    + "\n\t cause -> remaining bytes '"+buffer.remaining()+"' in the buffer is less than UUID size '" + lenght + "'";
             LOGGER.log(Level.WARNING, message);
             throw new DAOFileWriterException(message);
         }
@@ -446,7 +458,7 @@ public class DAOFileWriter implements PropertyChangeListener {
         int lenght = Integer.BYTES + stringToWrite.length();
         if ((buffer.remaining()) < lenght) {
             String message = "\n String '" + stringToWrite + "' can not be added to the buffer '" + buffer + "'"
-                    + "\n\t cause -> remaining bytes in the buffer is less than string lenght '" + lenght + "'";
+                    + "\n\t cause -> remaining bytes '"+buffer.remaining()+"' in the buffer is less than string lenght '" + lenght + "'";
             LOGGER.log(Level.WARNING, message);
             throw new DAOFileWriterException(message);
         }
@@ -475,7 +487,7 @@ public class DAOFileWriter implements PropertyChangeListener {
         checkNotNull("buffer", buffer);
         if (buffer.remaining() < 4) {
             String message = "\n Couldn't read string form buffer '" + buffer + "'"
-                    + " \n\t cause -> remaining bytes '" + buffer.remaining() + "' is less than 4";
+                    + " \n\t cause -> remaining bytes '" + buffer.remaining() + "' is less than int lenght '4'";
             LOGGER.log(Level.WARNING, message);
             throw new DAOFileWriterException(message);
         }

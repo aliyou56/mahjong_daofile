@@ -1,5 +1,6 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
+import fr.univubs.inf1603.mahjong.Wind;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.LinkManager;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.DataRow;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.DAOFileWriter;
@@ -15,7 +16,6 @@ import fr.univubs.inf1603.mahjong.engine.rule.FlowerTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SeasonTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SimpleHonor;
 import fr.univubs.inf1603.mahjong.engine.rule.SuperiorHonor;
-import fr.univubs.inf1603.mahjong.engine.rule.Wind;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.UUID;
