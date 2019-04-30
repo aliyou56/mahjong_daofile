@@ -67,7 +67,8 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
     @Override
     protected FileHeader readData(ByteBuffer buffer) throws DAOFileException {
         if (buffer.remaining() < FILE_HEADER_SIZE - 1) {
-            String message = "FileHader '" + getData() + "' can't be read from this buffer '" + buffer + "'"
+//            return null;
+            String message = "FileHader can't be read from the buffer '" + buffer + "'"
                     + "\n\t cause -> remaining bytes '" + buffer.remaining() + "' is less than FileHeader size '" + FILE_HEADER_SIZE + "'";
             LOGGER.log(Level.SEVERE, message);
             throw new DAOFileException(message);
@@ -89,10 +90,10 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
      */
     @Override
     protected int writeData(ByteBuffer buffer) throws DAOFileException {
-        if (buffer.remaining() < FILE_HEADER_SIZE - 1) {
-            String message = "FileHader '" + getData() + "' can't be writed in this buffer '" + buffer + "'"
-                    + "\n\t cause -> remaining bytes '" + buffer.remaining() + "' is not enought.";
-            LOGGER.log(Level.SEVERE, message);
+        if (buffer.remaining() < FILE_HEADER_SIZE) {
+//            return -1;
+            String message = "Remianing bytes '" + buffer.remaining() + "' is less than FILE_HEADER_SIZE '"
+                    + FILE_HEADER_SIZE +"'";
             throw new DAOFileException(message);
         }
         int startPosition = buffer.position();

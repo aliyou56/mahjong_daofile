@@ -33,6 +33,13 @@ public abstract class AbstractRowTest {
         ByteBuffer buffer = ByteBuffer.allocate(row.getRowSize());
         int result = row.write(buffer);
         assertEquals(expResult, result);
+        ByteBuffer buffer2 = ByteBuffer.allocate(1);
+        try {
+            row.write(buffer2);
+        } catch(DAOFileException ex) {
+            System.out.println(ex.getMessage());
+            assertTrue(true);
+        }
     }
 
     /**

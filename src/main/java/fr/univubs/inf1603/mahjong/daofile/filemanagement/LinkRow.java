@@ -79,6 +79,9 @@ public class LinkRow extends AbstractRow<Link> {
      */
     @Override
     protected Link readData(ByteBuffer buffer) {
+        if (buffer.remaining() < LINK_SIZE) {
+            return null;
+        }
         UUID childID = new UUID(buffer.getLong(), buffer.getLong());
         UUID parentID = new UUID(buffer.getLong(), buffer.getLong());
         Link data = new Link(childID, parentID);
@@ -89,10 +92,14 @@ public class LinkRow extends AbstractRow<Link> {
      * Ecrit un lien dans un tampon d'octet.
      *
      * @param buffer Tampon d'octet
+     * @return Le nombre d'octes écrits.
      * @throws DAOFileException s'il y'a une erreur lors de l'écriture.
      */
     @Override
     protected int writeData(ByteBuffer buffer) throws DAOFileException {
+        if (buffer.remaining() < LINK_SIZE) {
+            return -1;
+        }
         try {
             int startPosition = buffer.position();
             DAOFileWriter.writeUUID(buffer, getData().getUUID());

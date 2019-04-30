@@ -19,17 +19,13 @@ import static org.junit.Assert.*;
  * @author aliyou
  */
 public abstract class AbstractRowManagerTest {
-//    
-//    public AbstractRowManagerTest() {
-//    }
-//    
-//    @AfterClass
-//    public static void tearDownClass() {
-//    }
-//
-//    /**
-//     * Test of getRowList method, of class AbstractRowManager.
-//     */
+    
+    public AbstractRowManagerTest() {
+    }
+
+    /**
+     * Test of getRowList method, of class AbstractRowManager.
+     */
 //    @Test
 //    public void testGetRowList() throws Exception {
 //        System.out.println("getRowList");
@@ -41,7 +37,7 @@ public abstract class AbstractRowManagerTest {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-//
+
 //    /**
 //     * Test of getSingleRemoveList method, of class AbstractRowManager.
 //     */
@@ -230,10 +226,10 @@ public abstract class AbstractRowManagerTest {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-//
-//    /**
-//     * Test of getRowsSortedByUUID method, of class AbstractRowManager.
-//     */
+
+    /**
+     * Test of getRowsSortedByUUID method, of class AbstractRowManager.
+     */
 //    @Test
 //    public void testGetRowsSortedByUUID() {
 //        System.out.println("getRowsSortedByUUID");

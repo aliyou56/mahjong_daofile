@@ -105,14 +105,14 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
     protected void deleteFromPersistance(TileZone tileZone) throws DAOException {
         try {
             if (zoneToGameLinkManager.getRow(tileZone.getUUID()) == null) {
-                if (super.removeDataRow(tileZone.getUUID())) {
                     // suppression des tuiles qui sont dans la zone
-                    tileToZoneLinkManager.removeChildren(tileZone.getTiles());
-                    LOGGER.log(Level.INFO, "[INFO] {0} id={1} deleted from persistance",
+                tileToZoneLinkManager.removeChildren(tileZone.getTiles());
+                if (super.removeDataRow(tileZone.getUUID())) {
+                    LOGGER.log(Level.INFO, "{0} id={1} deleted from persistance",
                             new Object[]{tileZone.getClass().getSimpleName(), tileZone.getUUID()});
                 }
             } else {
-                String message = "TileZone id=" + tileZone.getUUID() + " cannot be delete : "
+                String message = "TileZone id=" + tileZone.getUUID() + " can't be deleted : "
                         + "\n\t cause -> it's linked to a game.";
                 LOGGER.log(Level.WARNING, message);
                 throw new DAOException(message);
@@ -124,7 +124,6 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
 
     @Override
     public void deleteFromPersistance(List<TileZone> zones) throws DAOFileException {
-        System.out.println("deletFromPersis Zone size : " + zones.size());
         try {
             for (TileZone tz : zones) {
                 deleteFromPersistance(tz);
@@ -142,26 +141,22 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
      *
      *      Format d'une zone dans un tuple :
      *
-     *          UUID=16    |    int=4    |      String=20       |   -> (Byte)
-     *         tileZoneID  |   nbTiles   |      identifier      |
-     *   ex :       -      |      -      |        WALL          |
+     *          UUID=16    |    int=4    |      int=4       | String=16  |   -> (Byte) 40
+     *         tileZoneID  |   nbTiles   | identifierLenght | identifier |
+     *   ex :       -      |      -      |        -         |    WALL    |
      * </pre>
      *
      */
     class ZoneRow extends DataRow<TileZone> {
 
         /**
-         * Taille minimale d'une zone en octet.
+         * Taille d'une zone en octet.
          */
-        private static final int ZONE_MIN_SIZE = 16 + 4 + (4 + 1);         // 25
-        /**
-         * Taille maximale d'une zone en octet.
-         */
-        private static final int ZONE_MAX_SIZE = ZONE_MIN_SIZE + 14;       // 39
+        private static final int ZONE_SIZE = 16 + 4 + (4 + 16);             // 40
         /**
          * Taille d'un tuple de zone.
          */
-        static final int ZONE_ROW_SIZE = ROW_HEADER_SIZE + ZONE_MAX_SIZE;  // 43
+        static final int ZONE_ROW_SIZE = ROW_HEADER_SIZE + ZONE_SIZE;       // 44
 
         /**
          * Constructeur avec l'identifiant d'un tuple <code>rowID</code>, une
@@ -173,7 +168,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
          * @param rowPointer Pointeur de tuple.
          */
         ZoneRow(int rowID, TileZone data, long rowPointer) throws DAOFileException {
-            super(rowID, data, ZONE_MAX_SIZE, rowPointer);
+            super(rowID, data, ZONE_SIZE, rowPointer);
         }
 
         /**
@@ -188,7 +183,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
          * zone <code>TileZone</code>.
          */
         ZoneRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
-            super(writer, ZONE_MAX_SIZE, rowPointer);
+            super(writer, ZONE_SIZE, rowPointer);
         }
 
         /**
@@ -213,6 +208,11 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
          */
         @Override
         protected TileZone readData(ByteBuffer buffer) throws DAOFileException {
+            if (buffer.remaining() < ZONE_SIZE) {
+                String message = "Remianing bytes '" + buffer.remaining() + "' is less than ZONE_SIZE '"
+                        + ZONE_SIZE + "'";
+                throw new DAOFileException(message);
+            }
             try {
                 UUID zoneID = new UUID(buffer.getLong(), buffer.getLong());
                 int nbTiles = buffer.getInt();
@@ -241,6 +241,12 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
          */
         @Override
         protected int writeData(ByteBuffer buffer) throws DAOFileException {
+            if (buffer.remaining() < ZONE_SIZE) {
+//                return -1;
+                String message = "Remianing bytes '" + buffer.remaining() + "' is less than ZONE_SIZE '"
+                        + ZONE_SIZE + "'";
+                throw new DAOFileException(message);
+            }
             try {
                 int stratPosition = buffer.position();
                 DAOFileWriter.writeUUID(buffer, getData().getUUID());

@@ -77,7 +77,10 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
         this.fhr = rowWriter.loadFileHeader();
         this.rowsSortedByPointer = new ArrayList<>();
         this.rowsSortedByUUID = new ArrayList<>();
-        loadAllRow();
+        int nbRows = loadAllRow();
+        if(nbRows != this.fhr.getData().getRowNumber()) {
+            this.fhr.getData().setRowNumber(nbRows);
+        }
 //        System.out.print(fhr.getData());
     }
 
@@ -98,7 +101,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
             for (Persistable data : dataList) {
                 AbstractRow row = getRow(data.getUUID());
                 RowUtilities.addRowToSortedListByPointer((List<AbstractRow>) rowList, row);
-            };
+            }
             return rowList;
         }
         return null;
@@ -154,13 +157,14 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
                         }
                     }
                 } catch (DAOFileWriterException ex) {
+                    LOGGER.log(Level.SEVERE, ex.getMessage());
                     throw new DAOFileException(ex.getMessage(), ex);
                 }
             }
             LOGGER.log(Level.FINE, "{0} tuples charg\u00e9s.", _nbRecords);
             return _nbRecords;
-        } catch (IOException ex) {
-            throw new DAOFileException("IO error : " + ex.getMessage());
+        } catch (DAOFileWriterException | DAOFileException ex) {
+            throw new DAOFileException(ex.getMessage());
         }
     }
 

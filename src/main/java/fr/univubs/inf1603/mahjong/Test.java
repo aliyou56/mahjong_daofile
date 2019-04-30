@@ -28,6 +28,8 @@ import fr.univubs.inf1603.mahjong.engine.rule.SeasonTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SimpleHonor;
 import fr.univubs.inf1603.mahjong.engine.rule.SuperiorHonor;
 import fr.univubs.inf1603.mahjong.engine.rule.Wind;
+import fr.univubs.inf1603.mahjong.sapi.Difficulty;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,33 +46,35 @@ public class Test {
     public static void main(String args[]) throws InterruptedException, DAOFileException, RulesException, MoveException, GameException {
         try {
             DAOManager daoManager = FileDAOManager.getInstance();
-//            SapiGameDAO sapiGameDao = daoManager.getSapiGameDao();
-            DAO<Game> gameDao = daoManager.getGameDao();
+            SapiGameDAO dao = daoManager.getSapiGameDao();
+            List<String> persistedNames = dao.loadPersistedNames();
+         
+               
+//            DAO<Game> gameDao = daoManager.getGameDao();
 //            DAO<TileZone> zoneDao = daoManager.getZoneDao();
 //            DAO<GameTileInterface> tileDao = daoManager.getTileDao();
-
-            GameRuleFactory ruleFactory = new GameRuleFactory();
-            GameRule rule = ruleFactory.create("INTERNATIONAL");
-            MahjongBoard board = new MahjongBoard(Wind.WEST);
-//            MahjongBoard board = rule.getBoardRule().distributeTiles(rule.getBoardRule().buildWall());
-            HashMap<Integer, TileZoneIdentifier> path = new HashMap<>();
-            path.put(2, TileZoneIdentifier.Wall);
-            HashMap<Integer, Boolean> publicalyVisible = new HashMap<>();
-            publicalyVisible.put(2, true);
-            Move lastPlayedMove = new Move(Wind.WEST, 0, path, publicalyVisible);
-            int[] playerPoints = {4, 8, 16, 32};
-            UUID gameID = new UUID(0, 1);
-            Wind[] playerWind = Wind.values();
-
-            Game game = new MahjongGame(rule, board, lastPlayedMove, Duration.ofMillis(4000), Duration.ofMillis(4000),
-                    playerPoints, gameID, playerWind);
-            gameDao.save(game);
-           
-            
-            Thread.sleep(8000);
-            
-            gameDao.delete(game);
-            Thread.sleep(8000);
+//            GameRuleFactory ruleFactory = new GameRuleFactory();
+//            GameRule rule = ruleFactory.create("INTERNATIONAL");
+//            MahjongBoard board = new MahjongBoard(Wind.WEST);
+////            MahjongBoard board = rule.getBoardRule().distributeTiles(rule.getBoardRule().buildWall());
+//            HashMap<Integer, TileZoneIdentifier> path = new HashMap<>();
+//            path.put(2, TileZoneIdentifier.Wall);
+//            HashMap<Integer, Boolean> publicalyVisible = new HashMap<>();
+//            publicalyVisible.put(2, true);
+//            Move lastPlayedMove = new Move(Wind.WEST, 0, path, publicalyVisible);
+//            int[] playerPoints = {4, 8, 16, 32};
+//            UUID gameID = new UUID(0, 1);
+//            Wind[] playerWind = Wind.values();
+//
+//            Game game = new MahjongGame(rule, board, lastPlayedMove, Duration.ofMillis(4000), Duration.ofMillis(4000),
+//                    playerPoints, gameID, playerWind);
+//            gameDao.save(game);
+//           
+//            
+//            Thread.sleep(8000);
+//            
+//            gameDao.delete(game);
+//            Thread.sleep(8000);
 
         } catch (DAOException ex) {
             ex.printStackTrace(System.out);

@@ -49,7 +49,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
     /**
      * Taille de l'en-tete d'un tuple.
      */
-    protected final static int ROW_HEADER_SIZE = 4;
+    public final static int ROW_HEADER_SIZE = 4;
     /**
      * Identifiant d'un tuple.
      */
@@ -150,16 +150,17 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
         FileDAOUtilities.checkNotNull("writer", writer);
         try {
             ByteBuffer buffer = writer.read(rowPointer, getRowSize());
-            if (buffer != null) {
-                read(buffer);
-            } else {
+            if (buffer == null) {
                 String message = "Row could not be read from the file."
-                        +"\n\t cause -> Couldn't read "+getRowSize()+" bytes from the file at the position " + rowPointer + "." ;
+                        +"\n\t\t\t cause -> No data found in the file at the position " + rowPointer + "." ;
 //                LOGGER.log(Level.WARNING, message);
                 throw new DAOFileException(message);
-            }
+            } 
+            read(buffer);
         } catch (DAOFileWriterException ex) {
-            throw new DAOFileException(ex.getMessage(), ex);
+            String message = "Row could not be read from the file."
+                    + "\n\t cause -> " + ex.getMessage();
+            throw new DAOFileException(message);
         }
     }
 
@@ -172,6 +173,11 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
     private void read(ByteBuffer buffer) throws DAOFileException {
         LOGGER.log(Level.FINE, " AbstractRow.read -> pointer = {0}", rowPointer);
         int position = buffer.position();
+        if (buffer.remaining() < getDataSize()) {
+            String message = "Row couldn't be read from the buffer '" + buffer + "'"
+                    + "\n\t cause -> Remianing bytes '" + buffer.remaining() + "' is less than ROW_SIZE '" + getRowSize() + "'";
+            throw new DAOFileException(message);
+        }
         try {
             this.rowID = buffer.getInt();
             T dataRead = readData(buffer);
@@ -182,11 +188,8 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
             this.data.addPropertyChangeListener(this);
         } catch (DAOFileException ex) {
             buffer.position(position);
-            String message = "A " + getData().getClass().getSimpleName() + " cannot be read from this buffer : " + buffer
-                    + "\n\t cause -> remaining bytes in the buffer is not enought"
-                    + "\n\t          " + getData().getClass().getSimpleName() + " size = " + getDataSize();
-            LOGGER.log(Level.SEVERE, message);
-            throw new DAOFileException(message);
+//            LOGGER.log(Level.SEVERE, ex.getMessage());
+            throw new DAOFileException(ex.getMessage());
         } 
     }
 
@@ -197,9 +200,13 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      * @throws DAOFileException s'il y'a une erreur lors de l'écriture.
      */
     int write(ByteBuffer buffer) throws DAOFileException {
-        int ret = -1;
         int startPosition = buffer.position();
         try {
+            if (buffer.remaining() < getDataSize()) {
+            String message = this.getClass().getSimpleName() + " data=" + getData() + " couldn't be writed in the buffer '" + buffer + "'"
+                    + "\n\t cause -> Remianing bytes '" + buffer.remaining() + "' is less than ROW_SIZE '"+getRowSize()+"'";
+                throw new DAOFileException(message);
+            }
             buffer.putInt(rowID);
             int nbWritedBytes = writeData(buffer);
             if (nbWritedBytes != getDataSize()) {
@@ -208,18 +215,13 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
             }
             LOGGER.log(Level.FINE, "startPosition : {0}, nbWritedBytes : {1}, endPosition : {2}, rowSize : {3}, dataType : {4}",
                     new Object[]{startPosition, nbWritedBytes, buffer.position(), getRowSize(), this.data.getClass().getSimpleName()});
-//            this.changed = false;
             setChanged(false);
-            ret = ROW_HEADER_SIZE + nbWritedBytes;
+            return ROW_HEADER_SIZE + nbWritedBytes;
         } catch (DAOFileException ex) {
             buffer.position(startPosition);
-            String message = "A " + getData().getClass().getSimpleName() + " cannot be writed in this buffer '" + buffer +"'"
-                    + "\n\t cause -> remaining bytes in the buffer is not enought"
-                    + "\n\t          " + getData().getClass().getSimpleName() + " size = " + getDataSize();
-            LOGGER.log(Level.SEVERE, message);
-            throw new DAOFileException(message);
+//            LOGGER.log(Level.SEVERE, message);
+            throw new DAOFileException(ex.getMessage());
         } 
-        return ret;
     }
 
     /**

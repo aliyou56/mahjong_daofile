@@ -57,7 +57,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      */
     private final HashMap<UUID, ArrayList<UUID>> mapParentChild;
     /**
-     * DAO
+     * DAO gérant les objets enfants du lien.
      */
     private FileDAOMahjong<T> dao = null;
 
@@ -150,6 +150,13 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
         return new LinkRow(writer, rowPointer);
     }
 
+    /**
+     * Ajoute un nouveau lien.
+     * 
+     * @param parentID Identifiant de l'objet parent.
+     * @param child Identifiant de l'objet enfant.
+     * @throws DAOFileException s'il y'a une erreur lors de l'ajout.
+     */
     public void addChild(UUID parentID, T child) throws DAOFileException {
         checkNotNull("parentID", parentID);
         checkNotNull("child", child);
@@ -183,6 +190,13 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
         }
     }
 
+    /**
+     * Mets à jour les liens existant entre un objet parent et ses objets enfants.
+     * 
+     * @param parentID Identifiant de l'objet parent.
+     * @param children Liste des objets <code>T</code> enfants.
+     * @throws DAOFileException s'il y'a une erreur lors de la mis à jour.
+     */
     public void updateChildrenLink(UUID parentID, List<T> children) throws DAOFileException {
         checkNotNull("parentID", parentID);
         checkNotNull("children", children);
@@ -199,7 +213,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
                 }
             });
 
-            System.out.println(" updateChildrenLink : parentID : " + parentID + ", nbChilds to remove : " + toRemovechildrenIDs.size());
+            LOGGER.log(Level.INFO, " updateChildrenLink : parentID : {0}, nbChilds to remove : {1}", new Object[]{parentID, toRemovechildrenIDs.size()});
             try {
                 removeChildrenByID(toRemovechildrenIDs);
             } catch (DAOException ex) {
@@ -212,7 +226,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
                     toUpdateList.add(child);
                 }
             });
-            System.out.println(" updateChildrenLink : parentID : " + parentID + ", nbNewChilds to add : " + toUpdateList.size());
+            LOGGER.log(Level.INFO, " updateChildrenLink : parentID : {0}, nbNewChilds to add : {1}", new Object[]{parentID, toUpdateList.size()});
             addChildren(parentID, toUpdateList);
         }
     }

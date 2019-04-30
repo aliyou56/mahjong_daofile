@@ -94,11 +94,11 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
             // on vérifie si la tuile n'est pas reliée à une zone
             if (tileToZoneLinkManager.getRow(gameTile.getUUID()) == null) {
                 if (super.removeDataRow(gameTile.getUUID())) {
-                    LOGGER.log(Level.INFO, "[INFO] {0} id={1} deleted from persistance",
+                    LOGGER.log(Level.INFO, " {0} id={1} deleted from persistance",
                             new Object[]{gameTile.getClass().getSimpleName(), gameTile.getUUID()});
                 }
             } else {
-                LOGGER.log(Level.INFO, "GameTile id={0} canno't be deleted cause it is linked to a zone", gameTile.getUUID());
+                LOGGER.log(Level.INFO, "GameTile id={0} can't be deleted cause it is linked to a zone", gameTile.getUUID());
             }
         } catch (DAOFileException ex) {
             throw new DAOException(ex.getMessage(), ex);
@@ -113,7 +113,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
      *
      *      Format d'une tuile dans  un tuple :
      *
-     *       UUID=16 |        String=3      | int=4  |      byte=1      |   byte=1   |    byte=1     |       int=4         | -> (Byte)
+     *       UUID=16 |        String=3      | int=4  |      byte=1      |   byte=1   |    byte=1     |       int=4         | -> (Byte) 30
      *       tileID  | tileClassShortenName | gameID | publicalyVisible | orientation|  wind/dragon  | number (commonTile) |
      * ex :     -    | cop/suh/sih/flt/sep  |   -    |        true      |  e/s/w/n   | e/s/w/n r/g/w |       [1-9]         |
      * </pre>
@@ -121,26 +121,22 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
      */
     class TileRow extends DataRow<GameTileInterface> {
 
+//        /**
+//         * Taille minimale d'une tuile en octet.
+//         * <pre>
+//         *       UUID=16 |        String=3      |  int=4 |       byte=1      |  byte=1    |    byte=1    | -> (Byte)
+//         *       tileID  | tileClassShortenName | gameID |  publicalyVisible | orientation|  wind/dragon |
+//         * </pre>
+//         */
+//        private static final int TILE_MIN_SIZE = 16 + 3 + 4 + 1 + 1 + 1;    // 26
         /**
-         * Taille minimale d'une tuile en octet.
-         * <pre>
-         *       UUID=16 |        String=3      |  int=4 |       byte=1      |  byte=1    |    byte=1    | -> (Byte)
-         *       tileID  | tileClassShortenName | gameID |  publicalyVisible | orientation|  wind/dragon |
-         * </pre>
+         * Taille d'une tuile en octet.
          */
-        private static final int TILE_MIN_SIZE = 16 + 3 + 4 + 1 + 1 + 1;    // 26
-        /**
-         * Taille maximale d'une tuile en octet.
-         * <pre>
-         *     + ->    |         int=4         | -> (Byte)
-         *     + ->    |  number (commonTile)  |
-         * </pre>
-         */
-        private static final int TILE_MAX_SIZE = TILE_MIN_SIZE + 4;        // 30
+        private static final int TILE_SIZE = 16 + 3 + 4 + 1 + 1 + 1 + 4;    // 30
         /**
          * Taille d'un tuple de tuile.
          */
-        static final int TILE_ROW_SIZE = ROW_HEADER_SIZE + TILE_MAX_SIZE;  // 34
+        static final int TILE_ROW_SIZE = ROW_HEADER_SIZE + TILE_SIZE;       // 34
 
         /**
          * Constructeur avec un identifiant de tuple <code>rowID</code>, une
@@ -152,7 +148,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
          * @param rowPointer Pointeur d'un tuple.
          */
         TileRow(int rowID, GameTileInterface data, long rowPointer) throws DAOFileException {
-            super(rowID, data, TILE_MAX_SIZE, rowPointer);
+            super(rowID, data, TILE_SIZE, rowPointer);
         }
 
         /**
@@ -167,7 +163,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
          * tuile <code>GameTile</code>.
          */
         TileRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
-            super(writer, TILE_MAX_SIZE, rowPointer);
+            super(writer, TILE_SIZE, rowPointer);
         }
 
         /**
@@ -179,8 +175,13 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
          */
         @Override
         protected GameTileInterface readData(ByteBuffer buffer) throws DAOFileException {
+            if (buffer.remaining() < TILE_SIZE) {
+//                return null;
+                String message = "Remianing bytes '" + buffer.remaining() + "' is less than TILE_SIZE '"
+                        + TILE_SIZE + "'";
+                throw new DAOFileException(message);
+            }
             try {
-                //            if (buffer.remaining() >= TILE_MIN_SIZE - 1) {
                 UUID tileID = new UUID(buffer.getLong(), buffer.getLong());
                 AbstractTile abstractTile = null;
                 String type = DAOFileWriter.readString(buffer, 3);
@@ -207,9 +208,6 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
                 }
                 GameTileInterface data = new GameTile(gameID, abstractTile, tileID, isPublicalyVisible, orientation);
                 return data;
-//            } else {
-//                throw new DAOFileException("Impossible de lire une tuile à partir de ce tampon : " +buffer);
-//            }
             } catch (DAOFileWriterException ex) {
                 throw new DAOFileException(ex.getMessage(), ex);
             }
@@ -222,10 +220,10 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
          */
         @Override
         protected int writeData(ByteBuffer buffer) throws DAOFileException {
-            if (buffer.remaining() < TILE_MAX_SIZE - 1) {
-                String message = "GameTile '" + getData() + "' can't be writed in this buffer '" + buffer + "'"
-                        + "\n\t cause -> Remaining bytes '" + buffer.remaining() + "' is not enought.";
-                LOGGER.log(Level.SEVERE, message);
+            if (buffer.remaining() < TILE_SIZE) {
+//                return -1;
+                String message = "Remianing bytes '" + buffer.remaining() + "' is less than TILE_SIZE '"
+                        + TILE_SIZE + "'";
                 throw new DAOFileException(message);
             }
             int stratPosition = buffer.position();

@@ -77,6 +77,9 @@ public class IndexRow extends AbstractRow<Index> {
      */
     @Override
     protected Index readData(ByteBuffer buffer) {
+        if (buffer.remaining() < INDEX_SIZE) {
+            return null;
+        }
         UUID dataID = new UUID(buffer.getLong(), buffer.getLong());
         long dataPointer = buffer.getLong();
         Index data = new Index(dataID, dataPointer);
@@ -87,10 +90,14 @@ public class IndexRow extends AbstractRow<Index> {
      * Ecrit un index dans un tampon d'octet.
      *
      * @param buffer Tampon d'octet.
+     * @return Le nombre d'octets écrits.
      * @throws DAOFileException s'il y'a une errue lors de l'écriture.
      */
     @Override
     protected int writeData(ByteBuffer buffer) throws DAOFileException {
+        if (buffer.remaining() < INDEX_SIZE) {
+            return -1;
+        }
         try {
             int startPosition = buffer.position();
             DAOFileWriter.writeUUID(buffer, getData().getUUID());

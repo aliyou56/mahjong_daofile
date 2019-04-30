@@ -161,9 +161,10 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @throws DAOException s'il y'a une erreur lors de la sauvegarde.
      */
     @Override
-    protected final void writeToPersistance(T data) throws DAOException {
+    protected synchronized final void writeToPersistance(T data) throws DAOException {
+        LOGGER.log(Level.FINE, "start : {0} -> {1}", new Object[]{ data.getClass().getSimpleName(), data.getUUID()});
         try {
-            AbstractRow<T> row = getDataRow(getNexRowID(), data, getNextRowPointer());
+            DataRow<T> row = getDataRow(getNexRowID(), data, getNextRowPointer());
             RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, row);
             dataWriter.addRowToMultipleWritingList(row);
             row.addPropertyChangeListener(dataWriter);
@@ -171,6 +172,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
         } catch (DAOFileException ex) {
             throw new DAOException(ex.getMessage(), ex);
         }
+        LOGGER.log(Level.FINE, "end : {0} -> {1}", new Object[]{ data.getClass().getSimpleName(), data.getUUID()});
     }
 
     /**
@@ -185,11 +187,11 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * données.
      */
     @Override
-    final protected T loadFromPersistance(UUID dataID) throws DAOException {
+    final synchronized protected T loadFromPersistance(UUID dataID) throws DAOException {
         try {
             IndexRow ir = indexManager.getRow(dataID);
             if (ir != null) {
-                AbstractRow<T> dataRow = getDataRow(dataWriter, ir.getData().getPointer());
+                DataRow<T> dataRow = getDataRow(dataWriter, ir.getData().getPointer());
 //            if (dataRow != null) {
                 RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
                 dataRow.addPropertyChangeListener(dataWriter);
@@ -209,7 +211,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @throws DAOException s'il y'a une erreur lors du chargement.
      */
     @Override
-    protected final List<T> laodAll() throws DAOException {
+    protected synchronized final List<T> laodAll() throws DAOException {
         ArrayList<T> dataList;
         if (getRowNumber() > map.size()) {
             for (IndexRow indexRow : indexManager.getRowsSortedByUUID()) {
@@ -232,12 +234,12 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * <code>false</code>.
      * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    protected final boolean removeDataRow(UUID dataID) throws DAOFileException {
+    protected synchronized final boolean removeDataRow(UUID dataID) throws DAOFileException {
         IndexRow indexRow = (IndexRow) indexManager.getRow(dataID);
         return removeDataRow(indexRow);
     }
 
-    private boolean removeDataRow(IndexRow indexRow) throws DAOFileException {
+    private synchronized boolean removeDataRow(IndexRow indexRow) throws DAOFileException {
         if (indexRow != null) {
             Index index = indexRow.getData();
             DataRow dataRow = (DataRow) RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
@@ -262,7 +264,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @param dataListToDelete Liste des objets <code>T</code> à supprimer.
      * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
-    public void deleteFromPersistance(List<T> dataListToDelete) throws DAOFileException { //TODO check
+    public synchronized void deleteFromPersistance(List<T> dataListToDelete) throws DAOFileException { //TODO check
         List<IndexRow> multipleRemoveList = indexManager.getRowList(dataListToDelete);
         if (multipleRemoveList != null) {
             List<IndexRow> singleRemoveList = indexManager.getSingleRemoveList(multipleRemoveList);
@@ -276,7 +278,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
                     DataRow dataRow = (DataRow) RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
                     removeRowFromRowsList(dataRow);
                     fhr.getData().decrementRowNumber();
-                };
+                }
                 indexManager.removeIndex(multipleRemoveList);
                 long startPointer = multipleRemoveList.get(0).getData().getPointer();
                 int offset = multipleRemoveList.size() * rowSize;
