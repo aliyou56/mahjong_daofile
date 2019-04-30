@@ -26,7 +26,7 @@ import java.util.logging.Logger;
  * tuples qui suivent est mis à jour.
  *
  * @author aliyou, nesrine
- * @version 1.2.4
+ * @version 1.2.5
  * @param <T> Tuple
  */
 public abstract class AbstractRowManager<T extends AbstractRow> {

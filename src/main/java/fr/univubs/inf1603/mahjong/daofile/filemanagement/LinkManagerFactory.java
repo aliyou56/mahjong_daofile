@@ -13,7 +13,7 @@ import java.nio.file.Path;
  * parents et objets enfants.
  * 
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class LinkManagerFactory {
 

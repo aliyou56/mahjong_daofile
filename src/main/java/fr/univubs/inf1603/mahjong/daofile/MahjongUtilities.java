@@ -8,9 +8,12 @@ import fr.univubs.inf1603.mahjong.engine.rule.SuperiorHonor;
 import fr.univubs.inf1603.mahjong.Wind;
 
 /**
- *
+ * Classe utilitaire pour le Mahjong. Permet de récupérer les constances de certaines 
+ * énumérations du moteur à l'aide de leur valeur.
+ * Exemple : un vent/dragon etc.. à l'aide d'un caractère (e/n/s/o..).
+ * 
  * @author aliyou
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class MahjongUtilities {
 

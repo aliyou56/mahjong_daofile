@@ -11,7 +11,7 @@ import java.util.UUID;
  * dans le fichier. Il est utilisé pour accelerer l'accès aux données
  * persistées.
  * 
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class Index implements Persistable {
 

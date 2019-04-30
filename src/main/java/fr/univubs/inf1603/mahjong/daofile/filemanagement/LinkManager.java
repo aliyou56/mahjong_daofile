@@ -42,7 +42,7 @@ import java.util.logging.Logger;
  *
  * @see AbstractRowManager
  * @author aliyou, nesrine
- * @version 1.2.4
+ * @version 1.2.5
  * @param <T> Objet <code>T</code> enfant du lien.
  */
 public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkRow> {

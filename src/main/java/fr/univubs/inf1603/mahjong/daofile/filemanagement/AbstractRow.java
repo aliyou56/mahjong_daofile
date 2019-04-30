@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  * </pre>
  *
  * @author aliyou, nesrine
- * @version 1.2.4
+ * @version 1.2.5
  * @param <T> Objet à persister
  */
 public abstract class AbstractRow<T extends MahjongObservable> implements MahjongObservable, PropertyChangeListener {

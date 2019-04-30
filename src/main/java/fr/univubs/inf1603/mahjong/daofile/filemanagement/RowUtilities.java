@@ -13,7 +13,7 @@ import java.util.logging.Logger;
  * Elle regroupe les algorithmes communs aux tuples.
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class RowUtilities {
 

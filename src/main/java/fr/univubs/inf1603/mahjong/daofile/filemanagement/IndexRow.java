@@ -11,7 +11,7 @@ import java.util.logging.Logger;
  * Cette classe répresente un tuple qui encapsule un index.
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class IndexRow extends AbstractRow<Index> {
 

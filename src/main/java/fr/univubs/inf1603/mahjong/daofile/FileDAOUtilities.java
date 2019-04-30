@@ -5,7 +5,7 @@ package fr.univubs.inf1603.mahjong.daofile;
  * Classe utilitaire pour le DAO Fichier.
  * 
  * @author aliyou
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class FileDAOUtilities {
     

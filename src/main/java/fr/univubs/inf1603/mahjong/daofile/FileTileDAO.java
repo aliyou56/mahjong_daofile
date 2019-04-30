@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  * {@link FileTileDAO.TileRow}.
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
 

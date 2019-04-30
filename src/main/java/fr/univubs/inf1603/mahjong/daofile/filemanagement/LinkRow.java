@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  * Cette classe répresente un tuple qui encapsule un lien.
  *
  * @author aliyou
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class LinkRow extends AbstractRow<Link> {
 

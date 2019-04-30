@@ -13,7 +13,7 @@ import java.util.logging.Logger;
  * fichier.
  * 
  * @author aliyou
- * @version 1.2
+ * @version 1.2.5
  */
 public class FileHeader implements MahjongObservable {
 

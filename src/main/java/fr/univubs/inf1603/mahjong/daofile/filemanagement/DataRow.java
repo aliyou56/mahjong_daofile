@@ -8,7 +8,7 @@ import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
  * qui a un index.
  *
  * @author aliyou
- * @version 1.1.0
+ * @version 1.2.5
  * @param <T> Obet à persister.
  */
 public abstract class DataRow<T extends Persistable> extends AbstractRow<T> {

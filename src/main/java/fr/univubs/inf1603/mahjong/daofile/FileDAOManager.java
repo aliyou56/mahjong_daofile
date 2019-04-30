@@ -19,7 +19,7 @@ import fr.univubs.inf1603.mahjong.dao.SapiGameDAO;
  * répertoire racine <code>Path</code> comme paramètre.
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class FileDAOManager implements DAOManager {
 

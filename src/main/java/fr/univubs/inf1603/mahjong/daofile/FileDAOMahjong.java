@@ -51,7 +51,7 @@ import java.util.logging.Logger;
  * </pre>
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.5
  * @param <T> Objet à persister
  */
 public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T> {

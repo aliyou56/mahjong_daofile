@@ -28,7 +28,7 @@ import java.util.logging.Logger;
  * {@code SapiGame} {@link FileSapiGameDAO.SapiGameRow}.
  *
  * @author aliyou, nesrine
- * @version 1.2.0
+ * @version 1.2.5
  */
 public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGameDAO, Serializable {
 
@@ -64,6 +64,32 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
         this.mapGameNameUUID = new HashMap<>();
     }
 
+    private void fillMap() {
+        long rowPointer = FileHeaderRow.FILE_HEADER_ROW_SIZE + AbstractRow.ROW_HEADER_SIZE;
+        int lenght = 16 + 54;
+        LOGGER.log(Level.INFO, "rowNumber : {0} | mapName size : {1} | lenght : {2} ",
+                new Object[]{getRowNumber(), mapGameNameUUID.size(), lenght});
+        if (getRowNumber() > mapGameNameUUID.size()) {
+            for (int i = 0; i < getRowNumber(); i++) {
+                try {
+                    if (dataWriter.getFileLenght() > rowPointer) {
+                        ByteBuffer buffer = dataWriter.read(rowPointer, lenght);
+                        if (buffer != null) {
+                            UUID gameID = new UUID(buffer.getLong(), buffer.getLong());
+                            String gameName = DAOFileWriter.readString(buffer);
+                            mapGameNameUUID.put(gameName, gameID);
+                            LOGGER.log(Level.INFO, "name : {0} -> id : {1}", new Object[]{gameName, gameID});
+                        }
+                    }
+                    rowPointer += SapiGameRow.SAPI_GAME_ROW_SIZE;
+                } catch (DAOFileWriterException ex) {
+                    LOGGER.log(Level.WARNING, ex.getMessage());
+                }
+            }
+
+        }
+    }
+    
     /**
      * {@inheritDoc}
      */
@@ -89,30 +115,8 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      */
     @Override
     public List<String> loadPersistedNames() throws DAOException {
+        fillMap();
         List<String> names = new ArrayList<>();
-        long rowPointer = FileHeaderRow.FILE_HEADER_ROW_SIZE + AbstractRow.ROW_HEADER_SIZE;
-        int lenght = 16 + 54;
-        LOGGER.log(Level.INFO, "rowNumber : {0} | mapName size : {1} | lenght : {2} ",
-                new Object[]{getRowNumber(), mapGameNameUUID.size(), lenght});
-        if (getRowNumber() > mapGameNameUUID.size()) {
-            for (int i = 0; i < getRowNumber(); i++) {
-                try {
-                    if (dataWriter.getFileLenght() > rowPointer) {
-                        ByteBuffer buffer = dataWriter.read(rowPointer, lenght);
-                        if (buffer != null) {
-                            UUID gameID = new UUID(buffer.getLong(), buffer.getLong());
-                            String gameName = DAOFileWriter.readString(buffer);
-                            mapGameNameUUID.put(gameName, gameID);
-                            LOGGER.log(Level.INFO, "name : {0} -> id : {1}", new Object[]{gameName, gameID});
-                        }
-                    }
-                    rowPointer += SapiGameRow.SAPI_GAME_ROW_SIZE;
-                } catch (DAOFileWriterException ex) {
-                    LOGGER.log(Level.WARNING, ex.getMessage());
-                }
-            }
-
-        }
         mapGameNameUUID.keySet().forEach((name) -> {
             names.add(name);
         });
@@ -123,9 +127,18 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      * {@inheritDoc}
      */
     @Override
+    public List<UUID> loadPersistedUUIDs() throws DAOException {
+        fillMap();
+        return new ArrayList<>(mapGameNameUUID.values());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public SapiGame find(String gameName) throws DAOException {
         FileDAOUtilities.checkNotNull("gameName", gameName);
-        loadPersistedNames();
+        fillMap();
         if (mapGameNameUUID.containsKey(gameName)) {
             UUID gameID = mapGameNameUUID.get(gameName);
             SapiGame result = super.find(gameID);

@@ -37,7 +37,7 @@ import java.util.logging.Logger;
  * {@code Game} {@link FileGameDAO.GameRow}.
  *
  * @author aliyou, nesrine
- * @version 1.2.0
+ * @version 1.2.5
  */
 public class FileGameDAO extends FileDAOMahjong<Game> {
 

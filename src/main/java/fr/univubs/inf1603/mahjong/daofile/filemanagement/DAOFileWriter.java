@@ -28,7 +28,7 @@ import java.util.logging.Logger;
  * <code>String</code> dans un tampon de d'octets <code>ByteBuffer</code>.
  *
  * @author aliyou, nesrine
- * @version 1.2.4
+ * @version 1.2.5
  */
 public class DAOFileWriter implements PropertyChangeListener {
 

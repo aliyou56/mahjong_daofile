@@ -24,8 +24,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
+ * Classe de test pour le SapiGameDAO.
+ * 
  * @author aliyou
+ * @version 1.2.5
  */
 public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
 
@@ -106,6 +108,51 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         assertTrue(expResult.size() == result.size());
         expResult.forEach(name -> {
             assertTrue(result.contains(name));
+        });
+        
+        dao.delete(sapiGame1);
+        dao.delete(sapiGame2);
+        dao.delete(sapiGame3);
+//        Thread.sleep(5000);
+    }
+    
+    /**
+     * Test of loadPersistedUUIDs method, of class FileSimpleGameDAO.
+     *
+     * @throws fr.univubs.inf1603.mahjong.dao.DAOException
+     * @throws fr.univubs.inf1603.mahjong.engine.rule.RulesException
+     * @throws fr.univubs.inf1603.mahjong.engine.game.GameException
+     * @throws java.lang.InterruptedException
+     */
+    @Test
+    public void testLoadPersistedUUIDs() throws DAOException, RulesException, GameException, InterruptedException {
+        System.out.println("loadPersistedUUIDs");
+        
+        DAOManager manager = FileDAOManager.getInstance(rootDir);
+        SapiGameDAO dao = manager.getSapiGameDao();
+        
+        assertEquals(new ArrayList<>(), dao.loadPersistedUUIDs());
+        
+        UUID id1 = new UUID(0, 357);
+        UUID id2 = new UUID(0, 359);
+        UUID id3 = new UUID(0, 328);
+        SapiGame sapiGame1 = new SapiGame("testLoadPersistedUUIDsGame1", Difficulty.MEDIUM, createGame(id1));
+        SapiGame sapiGame2 = new SapiGame("testLoadPersistedUUIDsGame2", Difficulty.HARD, createGame(id2));
+        SapiGame sapiGame3 = new SapiGame("testLoadPersistedUUIDsGame3", Difficulty.SILLY, createGame(id3));
+        dao.save(sapiGame1);
+        dao.save(sapiGame2);
+        dao.save(sapiGame3);
+//        Thread.sleep(10000); // Attendre que les données s'écrivent sur le disk.
+        
+        List<UUID> expResult = new ArrayList<>();
+        expResult.add(id1);
+        expResult.add(id2);
+        expResult.add(id3);
+        List<UUID> result = dao.loadPersistedUUIDs();
+        
+        assertTrue(expResult.size() == result.size());
+        expResult.forEach(uuid -> {
+            assertTrue(result.contains(uuid));
         });
         
         dao.delete(sapiGame1);

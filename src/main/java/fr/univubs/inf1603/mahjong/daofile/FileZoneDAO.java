@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  * {@link FileZoneDAO.ZoneRow}.
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class FileZoneDAO extends FileDAOMahjong<TileZone> {
 

@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  *
  * @see AbstractRowManager
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.5
  */
 public class IndexManager extends AbstractRowManager<IndexRow> {
 
