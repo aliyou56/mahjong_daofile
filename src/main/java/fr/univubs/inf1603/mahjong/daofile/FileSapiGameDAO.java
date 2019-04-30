@@ -13,6 +13,7 @@ import fr.univubs.inf1603.mahjong.engine.game.Game;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongGame;
 import fr.univubs.inf1603.mahjong.sapi.Difficulty;
 import fr.univubs.inf1603.mahjong.sapi.impl.SapiGame;
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -29,7 +30,7 @@ import java.util.logging.Logger;
  * @author aliyou, nesrine
  * @version 1.2.0
  */
-public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGameDAO {
+public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGameDAO, Serializable {
 
     /**
      * Logging
@@ -45,7 +46,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      * Tableau associatif gardant le lien entre les noms de parties et les
      * identifiants.
      */
-    private HashMap<String, UUID> mapNameUUID;
+    private HashMap<String, UUID> mapGameNameUUID;
 
     /**
      * Constructeur avec un Chemin d'accès du répertoire racine
@@ -60,7 +61,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
         super(rootDirPath, "sapiGame.data", "sapiGame.index", SapiGameRow.SAPI_GAME_ROW_SIZE);
 //        System.out.println(" -> FileSapiGameDAO");
         FileSapiGameDAO.gameDAO = gameDAO;
-        this.mapNameUUID = new HashMap<>();
+        this.mapGameNameUUID = new HashMap<>();
     }
 
     /**
@@ -68,6 +69,10 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      */
     @Override
     protected DataRow<SapiGame> getDataRow(int rowID, SapiGame data, long pointer) throws DAOFileException {
+        String gameName = data.getName();
+        if (!mapGameNameUUID.containsKey(gameName)) {
+            mapGameNameUUID.put(gameName, data.getUUID());
+        }
         return new SapiGameRow(rowID, data, pointer);
     }
 
@@ -75,31 +80,8 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      * {@inheritDoc}
      */
     @Override
-    protected DataRow<SapiGame> getDataRow(DAOFileWriter writer, long pointer) throws DAOFileException {
-        return new SapiGameRow(writer, pointer);
-    }
-
-    /**
-     * Supprime un objet {@code SapiGame} du fichier de données. La partie de
-     * Mahjong associé à l'objet {@code  SapiGame} est d'abord supprimé.
-     *
-     * @param sapiGame Objet {@code SapiGame} à supprimer.
-     * @throws DAOException s'il y'a une erreur lors de la suppression.
-     */
-    @Override
-    protected void deleteFromPersistance(SapiGame sapiGame) throws DAOException {
-        try {
-            gameDAO.delete(sapiGame.getUUID());
-            if (super.removeDataRow(sapiGame.getUUID())) {
-                if (mapNameUUID.containsKey(sapiGame.getName())) {
-                    mapNameUUID.remove(sapiGame.getName());
-                }
-                LOGGER.log(Level.INFO, "{0} id={1} deleted from persistance",
-                        new Object[]{sapiGame.getClass().getSimpleName(), sapiGame.getUUID()});
-            }
-        } catch (DAOFileException ex) {
-            throw new DAOException(ex.getMessage(), ex);
-        }
+    protected DataRow<SapiGame> getDataRow(long pointer) throws DAOFileException {
+        return new SapiGameRow(dataWriter, pointer);
     }
 
     /**
@@ -111,8 +93,8 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
         long rowPointer = FileHeaderRow.FILE_HEADER_ROW_SIZE + AbstractRow.ROW_HEADER_SIZE;
         int lenght = 16 + 54;
         LOGGER.log(Level.INFO, "rowNumber : {0} | mapName size : {1} | lenght : {2} ",
-                new Object[]{getRowNumber(), mapNameUUID.size(), lenght});
-        if (getRowNumber() > mapNameUUID.size()) {
+                new Object[]{getRowNumber(), mapGameNameUUID.size(), lenght});
+        if (getRowNumber() > mapGameNameUUID.size()) {
             for (int i = 0; i < getRowNumber(); i++) {
                 try {
                     if (dataWriter.getFileLenght() > rowPointer) {
@@ -120,7 +102,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
                         if (buffer != null) {
                             UUID gameID = new UUID(buffer.getLong(), buffer.getLong());
                             String gameName = DAOFileWriter.readString(buffer);
-                            mapNameUUID.put(gameName, gameID);
+                            mapGameNameUUID.put(gameName, gameID);
                             LOGGER.log(Level.INFO, "name : {0} -> id : {1}", new Object[]{gameName, gameID});
                         }
                     }
@@ -131,7 +113,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
             }
 
         }
-        mapNameUUID.keySet().forEach((name) -> {
+        mapGameNameUUID.keySet().forEach((name) -> {
             names.add(name);
         });
         return names;
@@ -144,11 +126,35 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
     public SapiGame find(String gameName) throws DAOException {
         FileDAOUtilities.checkNotNull("gameName", gameName);
         loadPersistedNames();
-        if (mapNameUUID.containsKey(gameName)) {
-            UUID gameID = mapNameUUID.get(gameName);
-            return super.find(gameID);
+        if (mapGameNameUUID.containsKey(gameName)) {
+            UUID gameID = mapGameNameUUID.get(gameName);
+            SapiGame result = super.find(gameID);
+            return result;
         }
         return null;
+    }
+
+    /**
+     * Supprime un objet {@code SapiGame} du fichier de données. La partie de
+     * Mahjong associé à l'objet {@code  SapiGame} est d'abord supprimé.
+     *
+     * @param sapiGame Objet {@code SapiGame} à supprimer.
+     * @throws DAOException s'il y'a une erreur lors de la suppression.
+     */
+    @Override
+    protected void deleteFromPersistance(SapiGame sapiGame) throws DAOException {
+        try {
+            if (mapGameNameUUID.containsKey(sapiGame.getName())) {
+                mapGameNameUUID.remove(sapiGame.getName());
+            }
+            gameDAO.delete(sapiGame.getUUID());
+            if (super.removeDataRow(sapiGame.getUUID())) {
+                LOGGER.log(Level.INFO, "{0} id={1} deleted from persistance",
+                        new Object[]{sapiGame.getClass().getSimpleName(), sapiGame.getUUID()});
+            }
+        } catch (DAOFileException ex) {
+            throw new DAOException(ex.getMessage(), ex);
+        }
     }
 
     /**
@@ -265,9 +271,6 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
                 if (gameDAO.find(getData().getUUID()) == null) {
                     gameDAO.save(getData().getGame());
                     indexManager.addIndex(getIndex());
-                    if (!mapNameUUID.containsKey(gameName)) {
-                        mapNameUUID.put(gameName, sapiGameID);
-                    }
                 }
 
                 return buffer.position() - startPosition;

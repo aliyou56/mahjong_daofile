@@ -97,8 +97,8 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
      * {@inheritDoc}
      */
     @Override
-    protected DataRow<Game> getDataRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
-        return new GameRow(writer, rowPointer);
+    protected DataRow<Game> getDataRow(long rowPointer) throws DAOFileException {
+        return new GameRow(dataWriter, rowPointer);
     }
 
     /**
@@ -133,7 +133,7 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
      * @throws DAOFileException s'il y'a une erreur lors de la suppression.
      */
     @Override
-    public void deleteFromPersistance(List<Game> games) throws DAOFileException { //TODO check
+    public void delete(List<Game> games) throws DAOFileException { //TODO check
         try {
             for (Game game : games) {
                 deleteFromPersistance(game);
@@ -357,7 +357,7 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
 
                 List<TileZone> zones = getTileZones(board.getZones());
                 if (!isWritedInFile()) { // première écriture dans le fichier de données
-                    zoneToGameLinkManager.addChildren(gameID, zones);
+                    zoneToGameLinkManager.addLink(gameID, zones);
                     setWritedInFile(true);
                     indexManager.addIndex(getIndex());
                 }

@@ -77,8 +77,8 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
      * {@inheritDoc}
      */
     @Override
-    protected DataRow getDataRow(DAOFileWriter writer, long pointer) throws DAOFileException {
-        return new TileRow(writer, pointer);
+    protected DataRow getDataRow(long rpwPointer) throws DAOFileException {
+        return new TileRow(dataWriter, rpwPointer);
     }
 
     /**

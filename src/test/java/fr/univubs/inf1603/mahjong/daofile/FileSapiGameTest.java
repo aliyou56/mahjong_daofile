@@ -39,15 +39,19 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         SapiGame sapiGame2 = new SapiGame("Game2", Difficulty.HARD, createGame(new UUID(0, 255)));
         SapiGame sapiGame3 = new SapiGame("Game3", Difficulty.MEDIUM, createGame(new UUID(0, 278)));
         SapiGame sapiGame4 = new SapiGame("Game4", Difficulty.SILLY, createGame(new UUID(0, 293)));
-
+        
         DAOManager manager = FileDAOManager.getInstance(rootDir);
         SapiGameDAO dao = manager.getSapiGameDao();
 
-        super.testSave(dao, sapiGame1);
-        super.testSave(dao, sapiGame2);
-        super.testSave(dao, sapiGame3);
-        super.testSave(dao, sapiGame4);
-        Thread.sleep(10000);
+        dao.save(sapiGame1);
+        dao.save(sapiGame2);
+        dao.save(sapiGame3);
+        dao.save(sapiGame4);
+//        Thread.sleep(10000);
+        testSapiGame(sapiGame1, dao.find(sapiGame1.getName()));
+        testSapiGame(sapiGame2, dao.find(sapiGame2.getUUID()));
+        testSapiGame(sapiGame3, dao.find(sapiGame3.getName()));
+        testSapiGame(sapiGame4, dao.find(sapiGame4.getUUID()));
     }
 
     /**
@@ -62,7 +66,7 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         super.testDelete(dao, new UUID(0, 293));
         super.testDelete(dao, new UUID(0, 245));
         super.testDelete(dao, new UUID(0, 255));
-        Thread.sleep(7000);
+//        Thread.sleep(7000);
     }
     
     /**
@@ -91,7 +95,7 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         dao.save(sapiGame1);
         dao.save(sapiGame2);
         dao.save(sapiGame3);
-        Thread.sleep(10000); // Attendre que les données s'écrivent sur le disk.
+//        Thread.sleep(10000); // Attendre que les données s'écrivent sur le disk.
         
         List<String> expResult = new ArrayList<>();
         expResult.add(name1);
@@ -107,7 +111,7 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         dao.delete(sapiGame1);
         dao.delete(sapiGame2);
         dao.delete(sapiGame3);
-        Thread.sleep(5000);
+//        Thread.sleep(5000);
     }
     
     /**
@@ -131,14 +135,21 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         SapiGame sapiGame2 = new SapiGame(name2, Difficulty.MEDIUM, createGame(new UUID(0, 912)));
         dao.save(sapiGame1);
         dao.save(sapiGame2);
-        Thread.sleep(10000); // Attendre que les données s'écrivent sur le disk.
+//        Thread.sleep(10000); // Attendre que les données s'écrivent sur le disk.
         
-        assertEquals(sapiGame1, dao.find(name1));
-        assertEquals(sapiGame2, dao.find(name2));
+        testSapiGame(sapiGame1, dao.find(name1));
+        testSapiGame(sapiGame2, dao.find(name2));
         
         dao.delete(sapiGame1);
         dao.delete(sapiGame2);
-        Thread.sleep(5000);
+//        Thread.sleep(5000);
+    }
+    
+    private void testSapiGame(SapiGame sp1, SapiGame sp2) {
+        assertEquals(sp1.getUUID(), sp2.getUUID());
+        assertEquals(sp1.getName(), sp2.getName());
+        assertEquals(sp1.getSurrenderDifficulty(), sp2.getSurrenderDifficulty());
+        assertEquals(sp1.getGame().getUUID(), sp2.getGame().getUUID());
     }
     
     @Test
@@ -154,11 +165,11 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         SapiGame sapiGame2 = new SapiGame(name2, Difficulty.EASY, createGame(new UUID(0, 722)));
         dao.save(sapiGame1);
         dao.save(sapiGame2);
-        Thread.sleep(10000); // Attendre que les données s'écrivent sur le disk.
+//        Thread.sleep(10000); // Attendre que les données s'écrivent sur le disk.
         
         dao.delete(name1);
         dao.delete(name2);
-        Thread.sleep(5000);
+//        Thread.sleep(5000);
         
         assertNull(dao.find(name1));
         assertNull(dao.find(name2));

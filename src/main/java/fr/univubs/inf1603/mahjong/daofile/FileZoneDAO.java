@@ -91,8 +91,8 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
      * {@inheritDoc}
      */
     @Override
-    protected DataRow getDataRow(DAOFileWriter writer, long pointer) throws DAOFileException {
-        return new ZoneRow(writer, pointer);
+    protected DataRow getDataRow(long pointer) throws DAOFileException {
+        return new ZoneRow(dataWriter, pointer);
     }
 
     /**
@@ -123,7 +123,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
     }
 
     @Override
-    public void deleteFromPersistance(List<TileZone> zones) throws DAOFileException {
+    public void delete(List<TileZone> zones) throws DAOFileException {
         try {
             for (TileZone tz : zones) {
                 deleteFromPersistance(tz);
@@ -256,12 +256,12 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
 //                System.out.println("writeData -> writedInFile : " + isWritedInFile());
                 if (!isWritedInFile()) { // première écriture dans le fichier de données
                     if (nbTiles != 0) {
-                        tileToZoneLinkManager.addChildren(getData().getUUID(), getData().getTiles());
+                        tileToZoneLinkManager.addLink(getData().getUUID(), getData().getTiles());
                     }
                     indexManager.addIndex(getIndex());
                     setWritedInFile(true);
                 } else { // mis à jour
-                    tileToZoneLinkManager.updateChildrenLink(getData().getUUID(), getData().getTiles());
+                    tileToZoneLinkManager.updateLink(getData().getUUID(), getData().getTiles());
                 }
                 return buffer.position() - stratPosition;
             } catch (DAOFileWriterException ex) {

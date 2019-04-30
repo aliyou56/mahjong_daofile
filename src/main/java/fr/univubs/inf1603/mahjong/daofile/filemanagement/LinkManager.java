@@ -42,7 +42,7 @@ import java.util.logging.Logger;
  *
  * @see AbstractRowManager
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.4
  * @param <T> Objet <code>T</code> enfant du lien.
  */
 public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkRow> {
@@ -51,6 +51,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * Logging
      */
     private static final Logger LOGGER = Logger.getLogger(LinkManager.class.getName());
+    
     /**
      * Tableau associatif associant l'identifiant d'un objet parent à un
      * ensemble d'identifiants d'objets enfants.
@@ -146,8 +147,8 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * {@inheritDoc}
      */
     @Override
-    protected LinkRow createRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
-        return new LinkRow(writer, rowPointer);
+    protected LinkRow createRow(long rowPointer) throws DAOFileException {
+        return new LinkRow(rowWriter, rowPointer);
     }
 
     /**
@@ -157,7 +158,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * @param child Identifiant de l'objet enfant.
      * @throws DAOFileException s'il y'a une erreur lors de l'ajout.
      */
-    public void addChild(UUID parentID, T child) throws DAOFileException {
+    public void addLink(UUID parentID, T child) throws DAOFileException {
         checkNotNull("parentID", parentID);
         checkNotNull("child", child);
         LOGGER.log(Level.FINE, "addChild -> parentID : {0} childID : {1}", new Object[]{parentID, child.getUUID()});
@@ -181,12 +182,12 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * @param children Liste des objets <code>T</code> enfants.
      * @throws DAOFileException s'il y'a une erreur lors de la liaison.
      */
-    public void addChildren(UUID parentID, List<T> children) throws DAOFileException {
+    public void addLink(UUID parentID, List<T> children) throws DAOFileException {
         checkNotNull("parentID", parentID);
         checkNotNull("children", children);
         LOGGER.log(Level.INFO, "parentID : {0}, nbChilds to add : {1}", new Object[]{parentID, children.size()});
         for (T child : children) {
-            addChild(parentID, child);
+            addLink(parentID, child);
         }
     }
 
@@ -197,7 +198,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * @param children Liste des objets <code>T</code> enfants.
      * @throws DAOFileException s'il y'a une erreur lors de la mis à jour.
      */
-    public void updateChildrenLink(UUID parentID, List<T> children) throws DAOFileException {
+    public void updateLink(UUID parentID, List<T> children) throws DAOFileException {
         checkNotNull("parentID", parentID);
         checkNotNull("children", children);
         ArrayList<UUID> existedChildrenIDs = mapParentChild.get(parentID);
@@ -227,7 +228,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
                 }
             });
             LOGGER.log(Level.INFO, " updateChildrenLink : parentID : {0}, nbNewChilds to add : {1}", new Object[]{parentID, toUpdateList.size()});
-            addChildren(parentID, toUpdateList);
+            LinkManager.this.addLink(parentID, toUpdateList);
         }
     }
 
@@ -264,14 +265,14 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
             if (!multipleRemoveList.isEmpty()) {
                 long startPointer = multipleRemoveList.get(0).getRowPointer();
                 multipleRemoveList.forEach(linkRow -> {
-                    super.removeRowFromRowsList(linkRow);
+                    super.removeRowFromList(linkRow);
                     removeFromMap(linkRow.getData());
                 });
                 int offset = multipleRemoveList.size() * rowSize;
                 try {
                     if (rowWriter.deleteFromFile((int) startPointer, offset)) {
                         super.updateRowsPointer(startPointer, offset);
-                        dao.deleteFromPersistance(children);
+                        dao.delete(children);
                         LOGGER.log(Level.INFO, " [OK] {0} Link successful deleted -> startPointer : {1} -- offset : {2}",
                                 new Object[]{multipleRemoveList.size(), startPointer, offset});
                         StringBuilder sb = new StringBuilder();

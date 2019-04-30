@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  * </pre>
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.4
  * @param <T> Objet à persister
  */
 public abstract class AbstractRow<T extends MahjongObservable> implements MahjongObservable, PropertyChangeListener {
@@ -114,25 +114,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
         this.data = data;
         this.data.addPropertyChangeListener(this);
     }
-
-    /**
-     * Constructeur avec un tampo d'octets <code>buffer</code>, la taille d'un
-     * objet encapsulé <code>dataSize</code> et un pointeur de tuple
-     * <code>rowPointer</code>.
-     *
-     * @param buffer Tampon d'octets à partir duquel un objet encapsulé
-     * <code>data</code> est lu. NE DOIT PAS ETRE NULL.
-     * @param dataSize Taille d'un objet encapsulé dans un tuple. DOIT ETRE
-     * SUPERIEUR A 0.
-     * @param rowPointer Pointeur d'un tuple. DOIT ETRE POSITIF.
-     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
-     */
-    protected AbstractRow(ByteBuffer buffer, int dataSize, long rowPointer) throws DAOFileException {
-        this(dataSize, rowPointer);
-        FileDAOUtilities.checkNotNull("buffer", buffer);
-        read(buffer);
-    }
-
+    
     /**
      * Constructeur avec le processus qui éffectue les opérations d'entrée/sortie 
      * sur un fichier <code>writer</code>, la taille d'un objet
@@ -162,6 +144,24 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
                     + "\n\t cause -> " + ex.getMessage();
             throw new DAOFileException(message);
         }
+    }
+
+    /**
+     * Constructeur avec un tampo d'octets <code>buffer</code>, la taille d'un
+     * objet encapsulé <code>dataSize</code> et un pointeur de tuple
+     * <code>rowPointer</code>.
+     *
+     * @param buffer Tampon d'octets à partir duquel un objet encapsulé
+     * <code>data</code> est lu. NE DOIT PAS ETRE NULL.
+     * @param dataSize Taille d'un objet encapsulé dans un tuple. DOIT ETRE
+     * SUPERIEUR A 0.
+     * @param rowPointer Pointeur d'un tuple. DOIT ETRE POSITIF.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
+     */
+    protected AbstractRow(ByteBuffer buffer, int dataSize, long rowPointer) throws DAOFileException {
+        this(dataSize, rowPointer);
+        FileDAOUtilities.checkNotNull("buffer", buffer);
+        read(buffer);
     }
 
     /**

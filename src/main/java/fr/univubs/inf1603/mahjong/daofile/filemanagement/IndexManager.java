@@ -71,8 +71,8 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      * {@inheritDoc}
      */
     @Override
-    protected IndexRow createRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
-        return new IndexRow(writer, rowPointer);
+    protected IndexRow createRow(long rowPointer) throws DAOFileException {
+        return new IndexRow(rowWriter, rowPointer);
     }
 
     /**
@@ -142,7 +142,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
             long startPointer = firstIndexRow.getRowPointer();
             long dataPointer = firstIndexRow.getData().getPointer();
             indexRowsSortedByPointerToDelete.forEach((indexRow) -> {
-                super.removeRowFromRowsList(indexRow);
+                super.removeRowFromList(indexRow);
             });
             updateDataRowsPointer(startPointer, dataPointer, indexRowsSortedByPointerToDelete.size() * this.dataRowSize);
             int offset = indexRowsSortedByPointerToDelete.size() * super.rowSize;

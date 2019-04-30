@@ -75,9 +75,7 @@ public abstract class FileDAOMahJongTest<T extends Persistable> {
      */
     protected void testDelete(DAO<T> dao, UUID objectID) {
         try {
-//            System.out.println("delete");
             dao.delete(objectID);
-//            Thread.sleep(4000);
             assertEquals(null, dao.find(objectID));
         } catch (DAOException /*| InterruptedException*/ ex) {
             ex.printStackTrace(System.out);

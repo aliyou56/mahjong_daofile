@@ -5,12 +5,10 @@ import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +28,7 @@ import java.util.logging.Logger;
  * <code>String</code> dans un tampon de d'octets <code>ByteBuffer</code>.
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.4
  */
 public class DAOFileWriter implements PropertyChangeListener {
 

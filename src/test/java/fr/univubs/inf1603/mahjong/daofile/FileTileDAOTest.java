@@ -22,6 +22,8 @@ import org.junit.Test;
  */
 public class FileTileDAOTest extends FileDAOMahJongTest<GameTileInterface> {
 
+    static final boolean TEST_WITH_FILE_WRITING = false;
+
     public FileTileDAOTest() {
         System.out.println("FileTileDAOTest");
     }
@@ -52,7 +54,9 @@ public class FileTileDAOTest extends FileDAOMahJongTest<GameTileInterface> {
             super.testSave(dao, tile5);
             super.testSave(dao, tile6);
             super.testSave(dao, tile7);
-            Thread.sleep(6000);
+            if (TEST_WITH_FILE_WRITING) {
+                Thread.sleep(6000);
+            }
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -89,7 +93,9 @@ public class FileTileDAOTest extends FileDAOMahJongTest<GameTileInterface> {
             super.testDelete(dao, new UUID(0, 9));
             super.testDelete(dao, new UUID(0, 1));
             super.testDelete(dao, new UUID(0, 7));
-            Thread.sleep(4000);
+            if (TEST_WITH_FILE_WRITING) {
+                Thread.sleep(4000);
+            }
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }

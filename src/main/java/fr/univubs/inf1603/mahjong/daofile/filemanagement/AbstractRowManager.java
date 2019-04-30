@@ -5,7 +5,6 @@ import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import fr.univubs.inf1603.mahjong.engine.persistence.UniqueIdentifiable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -27,7 +26,7 @@ import java.util.logging.Logger;
  * tuples qui suivent est mis à jour.
  *
  * @author aliyou, nesrine
- * @version 1.1.0
+ * @version 1.2.4
  * @param <T> Tuple
  */
 public abstract class AbstractRowManager<T extends AbstractRow> {
@@ -188,7 +187,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * @throws DAOFileException S'il y'a une erreur lors de la création d'un
      * tuple <code>T</code>.
      */
-    protected abstract T createRow(DAOFileWriter writer, long rowPointer) throws DAOFileException;
+    protected abstract T createRow(long rowPointer) throws DAOFileException;
 
     /**
      * Mets un tuple <code>T</code> dans la liste d'attente du processus qui
@@ -236,11 +235,11 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     protected boolean removeRow(T row) throws DAOFileException {
         if (row != null) {
             int pointer = (int) row.getRowPointer();
-            T realRow = createRow(rowWriter, row.getRowPointer());
+            T realRow = createRow(row.getRowPointer());
             LOGGER.log(Level.FINE, "[INFO] row to delete : {0}", row);
             LOGGER.log(Level.FINE, "[INFO] real row at the position in the file : {0}", realRow.getData());
             if (((UniqueIdentifiable) realRow.getData()).getUUID().compareTo(((UniqueIdentifiable) row.getData()).getUUID()) == 0) {
-                removeRowFromRowsList(row);
+                removeRowFromList(row);
                 updateRowsPointer(pointer, rowSize);
                 LOGGER.log(Level.FINE, "[OK] row removed : {0}", row);
                 try {
@@ -299,7 +298,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      *
      * @param row Tuple à retirer.
      */
-    protected void removeRowFromRowsList(T row) {
+    protected void removeRowFromList(T row) {
         row.setRowPointer(-1, false);
         row.getData().removePropertyChangeListener(row);
         row.removePropertyChangeListener(rowWriter);
