@@ -27,15 +27,12 @@ public abstract class AbstractRowManagerTest {
      * Test of getRowList method, of class AbstractRowManager.
      */
 //    @Test
-//    public void testGetRowList() throws Exception {
+//    public void testGetRowList(AbstractRowManager instance) throws Exception {
 //        System.out.println("getRowList");
-//        List<? extends Persistable> dataList = null;
-//        AbstractRowManager instance = null;
+//        List<Persistable> dataList = null;
 //        List expResult = null;
 //        List result = instance.getRowList(dataList);
 //        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
 //    }
 
 //    /**
@@ -155,22 +152,18 @@ public abstract class AbstractRowManagerTest {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-//
-//    /**
-//     * Test of getRow method, of class AbstractRowManager.
-//     */
+
+    /**
+     * Test of getRow method, of class AbstractRowManager.
+     */
 //    @Test
-//    public void testGetRow() throws Exception {
+//    public void testGetRow(AbstractRowManager instance, UUID dataID) {
 //        System.out.println("getRow");
-//        UUID dataID = null;
-//        AbstractRowManager instance = null;
 //        AbstractRow expResult = null;
 //        AbstractRow result = instance.getRow(dataID);
 //        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
 //    }
-//
+
 //    /**
 //     * Test of getRowNumber method, of class AbstractRowManager.
 //     */

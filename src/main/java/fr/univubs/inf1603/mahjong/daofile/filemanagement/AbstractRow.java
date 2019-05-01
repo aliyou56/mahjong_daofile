@@ -37,6 +37,8 @@ import java.util.logging.Logger;
  */
 public abstract class AbstractRow<T extends MahjongObservable> implements MahjongObservable, PropertyChangeListener {
 
+    public static final String DIRTY_PROPERTY = "dirty";
+    
     /**
      * Logging
      */
@@ -61,7 +63,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
     /**
      * Indique si l'état d'un tuple a changé ou pas.
      */
-    private boolean changed;
+    private boolean dirty;
     /**
      * Objet encapsulé dans un tuple.
      */
@@ -88,7 +90,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
         }
         this.dataSize = dataSize;
         this.rowPointer = rowPointer;
-        this.changed = false;
+        this.dirty = false;
         this.pcs = new PropertyChangeSupport(this);
     }
 
@@ -112,6 +114,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
         FileDAOUtilities.checkNotNull("data", data);
         this.rowID = rowID;
         this.data = data;
+        this.dirty = true;
         this.data.addPropertyChangeListener(this);
     }
     
@@ -139,6 +142,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
                 throw new DAOFileException(message);
             } 
             read(buffer);
+//            this.dirty = false;
         } catch (DAOFileWriterException ex) {
             String message = "Row could not be read from the file."
                     + "\n\t cause -> " + ex.getMessage();
@@ -162,6 +166,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
         this(dataSize, rowPointer);
         FileDAOUtilities.checkNotNull("buffer", buffer);
         read(buffer);
+//        this.dirty = false;
     }
 
     /**
@@ -215,7 +220,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
             }
             LOGGER.log(Level.FINE, "startPosition : {0}, nbWritedBytes : {1}, endPosition : {2}, rowSize : {3}, dataType : {4}",
                     new Object[]{startPosition, nbWritedBytes, buffer.position(), getRowSize(), this.data.getClass().getSimpleName()});
-            setChanged(false);
+            setDirty(false);
             return ROW_HEADER_SIZE + nbWritedBytes;
         } catch (DAOFileException ex) {
             buffer.position(startPosition);
@@ -261,19 +266,19 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      * @return <code>true</code> si l'état du tuple a changé sinon
      * <code>false</code>
      */
-    public boolean hasChanged() {
-        return changed;
+    public boolean isDirty() {
+        return dirty;
     }
 
     /**
      * Modifie et notifie l'état d'un tuple.
      *
-     * @param changed Nouvel état
+     * @param dirty Nouvel état
      */
-    public void setChanged(boolean changed) {
-        boolean oldValue = this.changed;
-        this.changed = changed;
-        this.pcs.firePropertyChange("changed", oldValue, changed);
+    public void setDirty(boolean dirty) {
+        boolean oldValue = this.dirty;
+        this.dirty = dirty;
+        this.pcs.firePropertyChange(DIRTY_PROPERTY, oldValue, dirty);
     }
 
     /**
@@ -315,7 +320,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
             if (this.rowPointer != rowPointer) {
                 this.rowPointer = rowPointer;
                 if (notifyWriter) {
-                    setChanged(true);
+                    setDirty(true);
                 }
             }
         }
@@ -346,7 +351,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      */
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        setChanged(true);
+        setDirty(true);
     }
 
     /**
@@ -362,7 +367,7 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
      */
     @Override
     public String toString() {
-        return "Row {" + "id=" + rowID + ", rowPointer=" + rowPointer + ", changed=" + changed
+        return "Row {" + "id=" + rowID + ", rowPointer=" + rowPointer + ", dirty=" + dirty
                 + "\n\tdataSize=" + dataSize + "\n\tdata=" + data + '}';
     }
 

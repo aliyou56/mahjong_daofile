@@ -17,6 +17,9 @@ import java.util.logging.Logger;
  */
 public class FileHeader implements MahjongObservable {
 
+    public static final String ROW_NUMBER_PROPERTY = "rowNumber",
+                               LAST_ROW_ID_PROPERTY = "lastRowID";
+    
     /**
      * Logging
      */
@@ -76,7 +79,7 @@ public class FileHeader implements MahjongObservable {
             if (rowNumber == 0) {
                 lastRowID = 0;
             }
-            this.pcs.firePropertyChange("rowNumber", oldValue, newValue);
+            this.pcs.firePropertyChange(ROW_NUMBER_PROPERTY, oldValue, newValue);
         }
     }
     
@@ -92,7 +95,7 @@ public class FileHeader implements MahjongObservable {
             int oldValue = this.lastRowID;
             int newValue = lastRowID;
             this.lastRowID = lastRowID;
-            this.pcs.firePropertyChange("lastRowID", oldValue, newValue);
+            this.pcs.firePropertyChange(LAST_ROW_ID_PROPERTY, oldValue, newValue);
         }
     }
     

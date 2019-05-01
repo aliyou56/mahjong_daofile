@@ -195,7 +195,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
         @Override
         public void propertyChange(PropertyChangeEvent evt) {
             if (evt.getPropertyName().equals(TileZone.TILELIST)) {
-                setChanged(true);
+                setDirty(true);
             }
         }
 

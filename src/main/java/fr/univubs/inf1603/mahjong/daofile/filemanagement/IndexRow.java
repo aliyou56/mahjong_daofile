@@ -2,6 +2,7 @@ package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
+import java.beans.PropertyChangeEvent;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -66,7 +67,18 @@ public class IndexRow extends AbstractRow<Index> {
     IndexRow(ByteBuffer buffer, long rowPointer) throws DAOFileException {
         super(buffer, INDEX_SIZE, rowPointer);
     }
-
+//
+//    /**
+//     * Change l'état d'un tuple lorsque l'état de l'objet encapsulé change.
+//     *
+//     * @param evt Evenement
+//     */
+//    @Override
+//    public void propertyChange(PropertyChangeEvent evt) {
+//        System.err.println("IndexRow propertyvhange");
+//        setDirty(true);
+//    }
+//    
     /**
      * Renvoie un index <code>IndexRow.Index</code> lu à partir d'un tampon d'octets
      * <code>buffer</code>.
@@ -101,7 +113,7 @@ public class IndexRow extends AbstractRow<Index> {
         try {
             int startPosition = buffer.position();
             DAOFileWriter.writeUUID(buffer, getData().getUUID());
-            buffer.putLong(getData().getPointer());
+            buffer.putLong(getData().getDataPointer());
             return buffer.position() - startPosition;
         } catch (DAOFileWriterException ex) {
             throw new DAOFileException(ex.getMessage(), ex);

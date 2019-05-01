@@ -8,6 +8,7 @@ import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,10 +46,6 @@ public class DAOFileWriter implements PropertyChangeListener {
      * Chemin d'accès d'un fichier.
      */
     private final Path filePath;
-    /**
-     * Fichier
-     */
-//    private RandomAccessFile file;
 
     /**
      * Liste de tuples qui sont écrits d'un seul coup (liste de tuples ordonnés
@@ -85,11 +82,10 @@ public class DAOFileWriter implements PropertyChangeListener {
             if(!this.filePath.toFile().exists()) {
                 this.filePath.toFile().createNewFile();
             }
-//            this.file = new RandomAccessFile(filePath.toFile(), "rw");
             this.multipleWritingList = new ArrayList<>();
             this.singleWritingList = new ArrayList<>();
         } catch (IOException ex) { // must never come because file is open with rw mode.
-            throw new DAOFileWriterException("IO error : " + filePath);
+            throw new DAOFileWriterException("IO error : " + ex.getMessage());
         }
     }
 
@@ -117,26 +113,16 @@ public class DAOFileWriter implements PropertyChangeListener {
         fhr.addPropertyChangeListener(this);
         return fhr;
     }
-
-//    private void openIfClosed() throws FileNotFoundException { 
-//        if (!this.file.getChannel().isOpen()) {
-//            System.out.println("**open");
-//            this.file = new RandomAccessFile(filePath.toFile(), "rw");
-//        }
-//    }
-
-    public long getFileLenght() throws DAOFileWriterException{
-//        try {
-//            openIfClosed();
+    
+    public long getFileLenght() {
         try (RandomAccessFile raf = new RandomAccessFile(this.filePath.toFile(), "rw")) {
             return raf.length();
         } catch (IOException ex) {
-            throw new DAOFileWriterException(ex.getMessage(), ex);
+            String message = "Couldn't get lenght of the file '"+this.filePath+"'"
+                    + "\n\t cause -> IO error occurs : " + ex.getMessage();
+            LOGGER.log(Level.WARNING, message);
+            return 0;
         }
-//            return this.file.length();
-//        } catch (IOException ex) {
-//            throw new DAOFileWriterException(ex.getMessage(), ex);
-//        }
     }
 
     /**
@@ -161,16 +147,12 @@ public class DAOFileWriter implements PropertyChangeListener {
         if (lenght < 0) {
             throw new IllegalArgumentException(" lenght '" + lenght + "' must be greater than zero.");
         }
-//        try {
         try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")){
-//            openIfClosed();
-//            if (position > file.length()) {
             if (position > raf.length()) {
                 throw new DAOFileWriterException("Couldn't read '" + lenght + "' bytes at the position '" 
                         + position + "' from the file '" + filePath + "'"
                         + "\n\t\t cause -> position '" + position + "' is greater than file size '" + getFileLenght() + "'");
             }
-//            FileChannel fileChannel = file.getChannel();
             FileChannel fileChannel = raf.getChannel();
             fileChannel.position(position);
             ByteBuffer buffer = ByteBuffer.allocate(lenght);
@@ -183,7 +165,7 @@ public class DAOFileWriter implements PropertyChangeListener {
             String message = "Couldn't read '" + lenght + "' bytes at the position '" + position + "' from the file '" + filePath + "'"
                     + "\n\t\t cause -> IO error occurs : " + ex.getMessage();
 //            LOGGER.log(Level.WARNING, message);
-            throw new DAOFileWriterException(message);
+            throw new DAOFileWriterException(message, ex);
         }
     }
 
@@ -203,34 +185,23 @@ public class DAOFileWriter implements PropertyChangeListener {
     synchronized public int write(long position, ByteBuffer buffer) throws DAOFileWriterException {
         checkNotNull("buffer", buffer);
         if (position >= 0) {
-//            try {
-            try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "rw")){
-//                openIfClosed();
-//                FileChannel fileChannel = file.getChannel();
-                FileChannel fileChannel = raf.getChannel();
+            try (RandomAccessFile file = new RandomAccessFile(filePath.toFile(), "rw")){
+                FileChannel fileChannel = file.getChannel();
                 buffer.flip();
-//                FileLock fileLock = fileChannel.lock(position, buffer.capacity(), false);
-//                if (fileLock != null) {
                     fileChannel.position(position);
                     while (buffer.hasRemaining()) {
                         fileChannel.write(buffer);
                     }
-//                    fileLock.release();
                     return (int) (buffer.position() - position);
-//                } else {
-//                    LOGGER.log(Level.WARNING, " **** can't have lock");
-//                }
+            } catch(ClosedByInterruptException ex) {
+                Thread.interrupted();
+                LOGGER.log(Level.SEVERE, ex.getMessage());
+//                write(position, buffer);
             } catch (IOException ex) {
-//                Thread.interrupted();
                 String message = " Couldn't write the buffer '"+ buffer+"' at the position '"+position+"' "
                         + " \n\t cause -> IO error occurs : " +ex.getMessage();
-//                if (!this.file.getChannel().isOpen()) {
-//                    try {
-//                        this.file = new RandomAccessFile(filePath.toFile(), "rw");
-//                    } catch (FileNotFoundException ex1) {}
-//                }
 //                LOGGER.log(Level.WARNING, message);
-                throw new DAOFileWriterException(message);
+                throw new DAOFileWriterException(message, ex);
             }
         }
         return -1;
@@ -256,9 +227,11 @@ public class DAOFileWriter implements PropertyChangeListener {
                 long offset = firstRow.getRowPointer() + firstRow.getRowSize();
                 for (AbstractRow row : multipleWritingList) {
                     if (offset - row.getRowPointer() == firstRow.getRowSize()) {
-                        if (row.getRowPointer() > -1) {
+                    System.err.println("** Multiple : " + row);
+//                        if (row.getRowPointer() > -1) {
+                            if(row.isDirty()) {
                             row.write(buffer);
-                        }
+                        } 
                         offset += firstRow.getRowSize();
                     } else {
                         addRowToSingleWritingList(row);
@@ -274,9 +247,12 @@ public class DAOFileWriter implements PropertyChangeListener {
             if (!singleWritingList.isEmpty()) {
                 for (AbstractRow row : singleWritingList) {
                     ByteBuffer buffer = ByteBuffer.allocate(row.getRowSize());
+                    System.err.println("** Single : " + row);
+                    if(row.isDirty()) {
                     row.write(buffer);
                     if (write(row.getRowPointer(), buffer) != -1) {
                         LOGGER.log(Level.INFO, " Single writng list writed on disk -> {0}", row.getClass().getSimpleName());
+                    }
                     }
                 }
                 singleWritingList.clear();
@@ -339,12 +315,14 @@ public class DAOFileWriter implements PropertyChangeListener {
      */
     @Override
     synchronized public void propertyChange(PropertyChangeEvent evt) {
-        AbstractRow row = (AbstractRow) evt.getSource();
-        if (row.hasChanged()) {
-            try {
-                addRowToSingleWritingList(row);
-            } catch (DAOFileException ex) {
-                LOGGER.log(Level.SEVERE, ex.getMessage());
+        if (evt.getPropertyName().equals(AbstractRow.DIRTY_PROPERTY)) {
+            AbstractRow row = (AbstractRow) evt.getSource();
+            if (row.isDirty()) {
+                try {
+                    addRowToSingleWritingList(row);
+                } catch (DAOFileException ex) {
+                    LOGGER.log(Level.SEVERE, ex.getMessage());
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import java.beans.PropertyChangeEvent;
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,6 +54,17 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
         super(writer, FILE_HEADER_SIZE, 0);
     }
 
+//    /**
+//     * Change l'état d'un tuple lorsque l'état de l'objet encapsulé change.
+//     *
+//     * @param evt Evenement
+//     */
+//    @Override
+//    public void propertyChange(PropertyChangeEvent evt) {
+//        System.err.println("FileHeaderRow propertyvhange");
+//        setDirty(true);
+//    }
+    
     /**
      * Renvoie une en-tete de fichier <code>FileHeader</code> lue à partir d'un
      * tampon d'octets <code>buffer</code>.

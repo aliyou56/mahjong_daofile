@@ -189,7 +189,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
         try {
             IndexRow indexRow = indexManager.getRow(dataID);
             if (indexRow != null) {
-                DataRow<T> dataRow = getDataRow(indexRow.getData().getPointer());
+                DataRow<T> dataRow = getDataRow(indexRow.getData().getDataPointer());
 //            if (dataRow != null) {    
                 // on ajoute le tuple chargé à la liste des tuples.
                 RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
@@ -241,11 +241,11 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
     private synchronized boolean removeDataRow(IndexRow indexRow) throws DAOFileException {
         if (indexRow != null) {
             Index index = indexRow.getData();
-            DataRow dataRow = (DataRow) RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
+            DataRow dataRow = (DataRow) RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getDataPointer());
             removeRowFromList(dataRow);
             try {
-                if (dataWriter.deleteFromFile((int) index.getPointer(), rowSize)) {
-                    RowUtilities.updateRowsPointer(dataRowsSortedByPointer, index.getPointer(), rowSize);
+                if (dataWriter.deleteFromFile((int) index.getDataPointer(), rowSize)) {
+                    RowUtilities.updateRowsPointer(dataRowsSortedByPointer, index.getDataPointer(), rowSize);
                     indexManager.removeIndex(indexRow);
                     fhr.getData().decrementRowNumber();
                     return true;
@@ -274,12 +274,12 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
             }
             if (!multipleRemoveList.isEmpty()) {
                 for (IndexRow indexRow : multipleRemoveList) {
-                    DataRow dataRow = (DataRow) RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getPointer());
+                    DataRow dataRow = (DataRow) RowUtilities.getRowFromSortedListByPointer(dataRowsSortedByPointer, indexRow.getData().getDataPointer());
                     removeRowFromList(dataRow);
                     fhr.getData().decrementRowNumber();
                 }
                 indexManager.removeIndex(multipleRemoveList);
-                long startPointer = multipleRemoveList.get(0).getData().getPointer();
+                long startPointer = multipleRemoveList.get(0).getData().getDataPointer();
                 int offset = multipleRemoveList.size() * rowSize;
                 try {
                     if (dataWriter.deleteFromFile((int) startPointer, offset)) {
@@ -310,7 +310,8 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      */
     private void removeRowFromList(DataRow dataRow) {
         if (dataRow != null) {
-            dataRow.setRowPointer(-1, false);
+//            dataRow.setRowPointer(-1, false);
+            dataRow.setDirty(false);
             Persistable data = (Persistable) dataRow.getData();
             map.remove(data.getUUID());
             dataRow.getData().removePropertyChangeListener(dataRow);

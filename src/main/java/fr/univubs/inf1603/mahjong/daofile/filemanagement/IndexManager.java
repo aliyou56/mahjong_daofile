@@ -117,7 +117,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
     public Index removeIndex(IndexRow indexRowToDelete) throws DAOFileException {
         if (indexRowToDelete != null) {
             long pointer = indexRowToDelete.getRowPointer();
-            long dataPointer = indexRowToDelete.getData().getPointer();
+            long dataPointer = indexRowToDelete.getData().getDataPointer();
             if (super.removeRow(indexRowToDelete)) { // pointer = -1 after delete
                 updateDataRowsPointer(pointer, dataPointer, dataRowSize);
                 LOGGER.log(Level.FINE, "[OK] index deleted -> dataID = {0}, rowSize = {1}, rowNumber = {2}",
@@ -140,7 +140,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
         if (!indexRowsSortedByPointerToDelete.isEmpty()) {
             IndexRow firstIndexRow = indexRowsSortedByPointerToDelete.get(0);
             long startPointer = firstIndexRow.getRowPointer();
-            long dataPointer = firstIndexRow.getData().getPointer();
+            long dataPointer = firstIndexRow.getData().getDataPointer();
             indexRowsSortedByPointerToDelete.forEach((indexRow) -> {
                 super.removeRowFromList(indexRow);
             });
@@ -178,16 +178,16 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
             LOGGER.log(Level.FINE, print("\t before   : ", getRowsSortedByRowPointer()));
             
             IndexRow indexRowAtPosition = getRowsSortedByRowPointer().get(position);
-            if (indexRowAtPosition.getData().getPointer() < dataPointer) {
+            if (indexRowAtPosition.getData().getDataPointer() < dataPointer) {
                 position += 1;
 //                System.out.println("\n\t position : " + position);
             }
             for (int i = position; i < getRowsSortedByRowPointer().size(); i++) {
                 Index nextIndex = (Index) getRowsSortedByRowPointer().get(i).getData();
-                long oldPointer = nextIndex.getPointer();
+                long oldPointer = nextIndex.getDataPointer();
                 long newPointer = oldPointer - offset;
                 if (newPointer >= FileHeaderRow.FILE_HEADER_ROW_SIZE) {
-                    nextIndex.setPointer(newPointer);
+                    nextIndex.setDataPointer(newPointer);
                     LOGGER.log(Level.FINE, "{0}, olPointer : {1} -> newPointer : {2}, offset={3}",
                             new Object[]{nextIndex, oldPointer, newPointer, offset});
                 }
@@ -206,7 +206,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
         StringBuilder result = new StringBuilder();
         result.append(name);
         list.forEach((ar) -> {
-                result.append(ar.getData().getPointer()).append(", ");
+                result.append(ar.getData().getDataPointer()).append(", ");
         });
         result.append("\n");
         return result.toString();

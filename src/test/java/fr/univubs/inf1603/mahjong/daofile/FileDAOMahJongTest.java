@@ -19,10 +19,16 @@ import static org.junit.Assert.*;
  */
 public abstract class FileDAOMahJongTest<T extends Persistable> {
 
+    /**
+     * Si {@code true} les données sont écrites dans les fichiers de données
+     */
+    protected static final boolean TEST_WITH_FILE_WRITING = false;
+    
     protected static Path rootDir;
 
     protected FileDAOMahJongTest() {
-        System.out.println("FileDAOMahJongTest");
+//        System.out.println("FileDAOMahJongTest");
+        System.out.println(" *** TEST_WITH_FILE_WRITING = "+TEST_WITH_FILE_WRITING+" *** \n");
         rootDir = Paths.get("/tmp", "mahjong", "dao");
         System.out.println(" rootDir : " + rootDir);
     }
@@ -58,7 +64,7 @@ public abstract class FileDAOMahJongTest<T extends Persistable> {
      * @param dao
      * @param object
      */
-    protected void testSave(DAO<T> dao, T object) {
+    protected void testSave(/*FileDAOMahjong*/DAO<T> dao, T object) {
         try {
             dao.save(object);
             assertEquals(object, dao.find(object.getUUID()));
@@ -73,11 +79,11 @@ public abstract class FileDAOMahJongTest<T extends Persistable> {
      * @param dao
      * @param objectID
      */
-    protected void testDelete(DAO<T> dao, UUID objectID) {
+    protected void testDelete(/*FileDAOMahjong*/DAO<T> dao, UUID objectID) {
         try {
             dao.delete(objectID);
-            assertEquals(null, dao.find(objectID));
-        } catch (DAOException /*| InterruptedException*/ ex) {
+            assertNull(dao.find(objectID));
+        } catch (DAOException ex) {
             ex.printStackTrace(System.out);
         }
     }

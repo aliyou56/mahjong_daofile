@@ -92,7 +92,7 @@ public abstract class AbstractRowTest {
     }
 
     /**
-     * Test of hasChanged method, of class AbstractRow.
+     * Test of isDirty method, of class AbstractRow.
      * @param row
      * @param expResult
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
@@ -103,24 +103,24 @@ public abstract class AbstractRowTest {
 //        row.writeData(buffer);
 //        
 //        boolean expResult = false;
-        boolean result = row.hasChanged();
+        boolean result = row.isDirty();
         assertEquals(expResult, result);
     }
 
     /**
-     * Test of setChanged method, of class AbstractRow.
+     * Test of setDirty method, of class AbstractRow.
      * @param row
      */
     protected void testSetChanged(AbstractRow row) {
         System.out.println("setChanged");
         boolean expResult = false;
-        row.setChanged(expResult);
-        boolean result = row.hasChanged();
+        row.setDirty(expResult);
+        boolean result = row.isDirty();
         assertEquals(expResult, result);
         
         expResult = false;
-        row.setChanged(expResult);
-        result = row.hasChanged();
+        row.setDirty(expResult);
+        result = row.isDirty();
         assertEquals(expResult, result);
     }
 

@@ -250,11 +250,8 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
         @Override
         public void propertyChange(PropertyChangeEvent evt) {
             String propertyName = evt.getPropertyName();
-            if (propertyName.equals(Game.LAST_PLAYED_MOVE_PROPERTY)
-                    || propertyName.equals(Game.PLAYERPOINTS)
-                    || propertyName.equals(Game.PLAYERWIND)
-                    || propertyName.equals(Board.CURRENTWIND)) {
-                setChanged(true);
+            if (propertyName.equals(Game.LAST_PLAYED_MOVE_PROPERTY)) {
+                setDirty(true);
             }
         }
 

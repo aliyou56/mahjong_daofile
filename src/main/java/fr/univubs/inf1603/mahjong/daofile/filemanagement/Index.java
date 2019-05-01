@@ -15,6 +15,8 @@ import java.util.UUID;
  */
 public class Index implements Persistable {
 
+    public static final String DATA_POINTER_PROPERTY = "dirty";
+    
     /**
      * Support d'écoute
      */
@@ -27,7 +29,7 @@ public class Index implements Persistable {
     /**
      * Pointeur de donné pointant sur un objet indexé.
      */
-    private long pointer;
+    private long dataPointer;
 
     /**
      * Constructeur avec l'identifiant de indexé et le pointeur de donné.
@@ -37,7 +39,7 @@ public class Index implements Persistable {
      */
     public Index(UUID dataID, long pointer) {
         this.dataID = dataID;
-        this.pointer = pointer;
+        this.dataPointer = pointer;
         this.pcs = new PropertyChangeSupport(this);
     }
 
@@ -56,20 +58,20 @@ public class Index implements Persistable {
      *
      * @return Pointeur de données d'un index.
      */
-    public long getPointer() {
-        return pointer;
+    public long getDataPointer() {
+        return dataPointer;
     }
 
     /**
      * Modifie le pointeur de donné d'un index.
      *
-     * @param pointer Nouvelle valeur du pointeur de donnée.
+     * @param dataPointer Nouvelle valeur du pointeur de donnée.
      */
-    public void setPointer(long pointer) {
-        if (this.pointer != pointer) {
-            long oldValue = this.pointer;
-            this.pointer = pointer;
-            this.pcs.firePropertyChange("pointer", oldValue, this.pointer);
+    public void setDataPointer(long dataPointer) { 
+        if (this.dataPointer != dataPointer) {
+            long oldValue = this.dataPointer;
+            this.dataPointer = dataPointer;
+            this.pcs.firePropertyChange(DATA_POINTER_PROPERTY, oldValue, this.dataPointer);
         }
     }
 
@@ -88,14 +90,14 @@ public class Index implements Persistable {
      */
     @Override
     public String toString() {
-        return "Index{" + "dataID=" + dataID + ", pointer=" + pointer + '}';
+        return "Index{" + "dataID=" + dataID + ", dataPointer=" + dataPointer + '}';
     }
 
     @Override
     public int hashCode() {
         int hash = 5;
         hash = 13 * hash + Objects.hashCode(this.dataID);
-        hash = 13 * hash + (int) (this.pointer ^ (this.pointer >>> 32));
+        hash = 13 * hash + (int) (this.dataPointer ^ (this.dataPointer >>> 32));
         return hash;
     }
 
@@ -111,7 +113,7 @@ public class Index implements Persistable {
             return false;
         }
         final Index other = (Index) obj;
-        if (this.pointer != other.pointer) {
+        if (this.dataPointer != other.dataPointer) {
             return false;
         }
         return this.dataID.compareTo(other.dataID) == 0;

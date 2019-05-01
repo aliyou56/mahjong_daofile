@@ -4,6 +4,7 @@ import fr.univubs.inf1603.mahjong.Wind;
 import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.engine.game.GameTile;
 import fr.univubs.inf1603.mahjong.engine.game.GameTileInterface;
 import fr.univubs.inf1603.mahjong.engine.rule.CommonTile;
@@ -22,8 +23,6 @@ import org.junit.Test;
  */
 public class FileTileDAOTest extends FileDAOMahJongTest<GameTileInterface> {
 
-    static final boolean TEST_WITH_FILE_WRITING = false;
-
     public FileTileDAOTest() {
         System.out.println("FileTileDAOTest");
     }
@@ -32,9 +31,10 @@ public class FileTileDAOTest extends FileDAOMahJongTest<GameTileInterface> {
      * Test of save method, of class FileTileDAO.
      *
      * @throws fr.univubs.inf1603.mahjong.dao.DAOException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
     @Test
-    public void testSave() throws DAOException {
+    public void testSave() throws DAOException, DAOFileException {
         System.out.println("save");
         try {
             GameTileInterface tile1 = new GameTile(1, new CommonTile(CommonTile.Family.BAMBOO, CommonTile.Number.NINE), new UUID(0, 1), true, Wind.EAST);
@@ -47,6 +47,7 @@ public class FileTileDAOTest extends FileDAOMahJongTest<GameTileInterface> {
 
             DAOManager manager = FileDAOManager.getInstance(rootDir);
             DAO<GameTileInterface> dao = manager.getTileDao();
+//            FileTileDAO dao = new FileTileDAO(rootDir);
             super.testSave(dao, tile1);
             super.testSave(dao, tile2);
             super.testSave(dao, tile3);
@@ -62,43 +63,43 @@ public class FileTileDAOTest extends FileDAOMahJongTest<GameTileInterface> {
         }
     }
 
-    @Test
-    public void findAll() throws DAOException {
-        System.out.println("findAll");
-        DAOManager manager = FileDAOManager.getInstance(rootDir);
-        DAO<GameTileInterface> dao = manager.getTileDao();
-        for (GameTileInterface t : dao.findAll()) {
-            System.out.println(t);
-        }
-    }
-
-    /**
-     * Test of delete method, of class FileTileDAO.
-     *
-     * @throws fr.univubs.inf1603.mahjong.dao.DAOException
-     */
-    @Test
-    public void testDelete() throws DAOException {
-        System.out.println("delete");
-        try {
-            DAOManager manager = FileDAOManager.getInstance(rootDir);
-            DAO<GameTileInterface> dao = manager.getTileDao();
-            for (GameTileInterface t : dao.findAll()) {
-                System.out.println(t);
-            }
-            super.testDelete(dao, new UUID(0, 3));
-            super.testDelete(dao, new UUID(0, 8));
-            super.testDelete(dao, new UUID(0, 2));
-            super.testDelete(dao, new UUID(0, 5));
-            super.testDelete(dao, new UUID(0, 9));
-            super.testDelete(dao, new UUID(0, 1));
-            super.testDelete(dao, new UUID(0, 7));
-            if (TEST_WITH_FILE_WRITING) {
-                Thread.sleep(4000);
-            }
-        } catch (InterruptedException ex) {
-            Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
+//    @Test
+//    public void findAll() throws DAOException {
+//        System.out.println("findAll");
+//        DAOManager manager = FileDAOManager.getInstance(rootDir);
+//        DAO<GameTileInterface> dao = manager.getTileDao();
+//        for (GameTileInterface t : dao.findAll()) {
+//            System.out.println(t);
+//        }
+//    }
+//
+//    /**
+//     * Test of delete method, of class FileTileDAO.
+//     *
+//     * @throws fr.univubs.inf1603.mahjong.dao.DAOException
+//     */
+//    @Test
+//    public void testDelete() throws DAOException {
+//        System.out.println("delete");
+//        try {
+//            DAOManager manager = FileDAOManager.getInstance(rootDir);
+//            DAO<GameTileInterface> dao = manager.getTileDao();
+//            for (GameTileInterface t : dao.findAll()) {
+//                System.out.println(t);
+//            }
+//            super.testDelete(dao, new UUID(0, 3));
+//            super.testDelete(dao, new UUID(0, 8));
+//            super.testDelete(dao, new UUID(0, 2));
+//            super.testDelete(dao, new UUID(0, 5));
+//            super.testDelete(dao, new UUID(0, 9));
+//            super.testDelete(dao, new UUID(0, 1));
+//            super.testDelete(dao, new UUID(0, 7));
+//            if (TEST_WITH_FILE_WRITING) {
+//                Thread.sleep(4000);
+//            }
+//        } catch (InterruptedException ex) {
+//            Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//    }
 
 }

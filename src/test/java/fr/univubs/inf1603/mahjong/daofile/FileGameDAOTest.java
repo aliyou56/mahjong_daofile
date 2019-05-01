@@ -1,4 +1,3 @@
-
 package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.Wind;
@@ -25,8 +24,8 @@ import org.junit.Test;
  *
  * @author aliyou
  */
-public class FileGameDAOTest extends FileDAOMahJongTest<Game>{
-    
+public class FileGameDAOTest extends FileDAOMahJongTest<Game> {
+
     public FileGameDAOTest() {
         System.out.println("FileGameDAOTest");
     }
@@ -34,9 +33,10 @@ public class FileGameDAOTest extends FileDAOMahJongTest<Game>{
     @AfterClass
     public static void tearDownClass() throws Exception {
     }
-    
+
     /**
      * Test of save method, of class FileGameDAO.
+     *
      * @throws fr.univubs.inf1603.mahjong.dao.DAOException
      * @throws fr.univubs.inf1603.mahjong.engine.rule.RulesException
      * @throws fr.univubs.inf1603.mahjong.engine.game.MoveException
@@ -48,24 +48,27 @@ public class FileGameDAOTest extends FileDAOMahJongTest<Game>{
             Game game2 = createGame(new UUID(0, 452));
             Game game3 = createGame(new UUID(0, 453));
             Game game4 = createGame(new UUID(0, 454));
-            
+
             DAOManager manager = FileDAOManager.getInstance(rootDir);
             DAO<Game> dao = manager.getGameDao();
-            
+
             super.testSave(dao, game1);
             super.testSave(dao, game2);
             super.testSave(dao, game3);
             super.testSave(dao, game4);
-            
-            Thread.sleep(7000);
-            
+
+            if (TEST_WITH_FILE_WRITING) {
+                Thread.sleep(7000);
+            }
+
         } catch (InterruptedException ex) {
             ex.printStackTrace(System.out);
         }
     }
-    
+
     /**
      * Test of delete method, of class FileZoneDAO.
+     *
      * @throws fr.univubs.inf1603.mahjong.dao.DAOException
      */
     @Test
@@ -77,17 +80,44 @@ public class FileGameDAOTest extends FileDAOMahJongTest<Game>{
             super.testDelete(dao, new UUID(0, 452));
             super.testDelete(dao, new UUID(0, 451));
             super.testDelete(dao, new UUID(0, 454));
-            Thread.sleep(6000);
+            if (TEST_WITH_FILE_WRITING) {
+                Thread.sleep(6000);
+            }
         } catch (InterruptedException ex) {
             ex.printStackTrace(System.out);
         }
     }
+
+//    @Test
+//    public void testUpdate() throws DAOException, InterruptedException, RulesException, GameException {
+//        System.out.println("testUpdate");
+//        MahjongGame game = createGame(new UUID(0, 110));
+//
+//        DAOManager manager = FileDAOManager.getInstance(rootDir);
+//        DAO<Game> dao = manager.getGameDao();
+//        super.testSave(dao, game);
+//        if (TEST_WITH_FILE_WRITING) {
+//            Thread.sleep(8000);
+//        }
+//
+//        MahjongBoard board = (MahjongBoard) game.getBoard();
+//        board.setWind(Wind.EAST);
+//        if (TEST_WITH_FILE_WRITING) {
+//            Thread.sleep(7000);
+//        }
+//
+//        dao.delete(game);
+//        if (TEST_WITH_FILE_WRITING) {
+//            Thread.sleep(6000);
+//        }
+//    }
     
+
     private MahjongGame createGame(UUID gameID) throws RulesException, MoveException, GameException {
         GameRuleFactory ruleFactory = new GameRuleFactory();
         GameRule rule = ruleFactory.create("INTERNATIONAL");
-        MahjongBoard board = new MahjongBoard(Wind.WEST);
-//            MahjongBoard board = rule.getBoardRule().distributeTiles(rule.getBoardRule().buildWall());
+//        MahjongBoard board = new MahjongBoard(Wind.WEST);
+        MahjongBoard board = rule.getBoardRule().distributeTiles(rule.getBoardRule().buildWall());
         HashMap<Integer, TileZoneIdentifier> path = new HashMap<>();
         path.put(2, TileZoneIdentifier.Wall);
         HashMap<Integer, Boolean> publicalyVisible = new HashMap<>();

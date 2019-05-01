@@ -181,7 +181,6 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     /**
      * Renvoie un tuple <code>T</code> lu à partir d'un fichier.
      *
-     * @param writer Wrtier du fichier.
      * @param rowPointer Pointeur de tuple.
      * @return Le tuple <code>T</code> lu.
      * @throws DAOFileException S'il y'a une erreur lors de la création d'un
@@ -299,7 +298,8 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * @param row Tuple à retirer.
      */
     protected void removeRowFromList(T row) {
-        row.setRowPointer(-1, false);
+//        row.setRowPointer(-1, false);
+        row.setDirty(false);
         row.getData().removePropertyChangeListener(row);
         row.removePropertyChangeListener(rowWriter);
         rowsSortedByPointer.remove(row);
