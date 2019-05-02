@@ -159,7 +159,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * @throws DAOException s'il y'a une erreur lors de la sauvegarde.
      */
     @Override
-    protected synchronized final void writeToPersistance(T data) throws DAOException {
+    protected synchronized final void writeToPersistence(T data) throws DAOException {
         LOGGER.log(Level.FINE, "start : {0} -> {1}", new Object[]{ data.getClass().getSimpleName(), data.getUUID()});
         try {
             DataRow<T> row = getDataRow(getNexRowID(), data, getNextRowPointer());
@@ -185,17 +185,17 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      * données.
      */
     @Override
-    final synchronized protected T loadFromPersistance(UUID dataID) throws DAOException {
+    final synchronized protected T loadFromPersistence(UUID dataID) throws DAOException {
         try {
             IndexRow indexRow = indexManager.getRow(dataID);
             if (indexRow != null) {
                 DataRow<T> dataRow = getDataRow(indexRow.getData().getDataPointer());
-//            if (dataRow != null) {    
-                // on ajoute le tuple chargé à la liste des tuples.
-                RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
-                dataRow.addPropertyChangeListener(dataWriter);
-                return dataRow.getData();
-//            }
+                if (dataRow != null) {
+                    // on ajoute le tuple chargé à la liste des tuples.
+                    RowUtilities.addRowToSortedListByPointer(dataRowsSortedByPointer, dataRow);
+                    dataRow.addPropertyChangeListener(dataWriter);
+                    return dataRow.getData();
+                }
             }
         } catch (DAOFileException ex) {
             throw new DAOException(ex.getMessage(), ex);
@@ -286,11 +286,13 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
                         RowUtilities.updateRowsPointer(dataRowsSortedByPointer, startPointer, offset);
                         LOGGER.log(Level.INFO, " [OK] {0} {1} successful deleted -> startPointer : {2} -- offset : {3}",
                                 new Object[]{multipleRemoveList.size(), dataListToDelete.get(0).getClass().getSimpleName(), startPointer, offset});
-                        System.out.println("    { ");
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("\t{ ");
                         multipleRemoveList.forEach(ir -> {
-                            System.out.println(" \t -> uuid = " + ir.getData().getUUID());
+                            sb.append(" \t -> uuid = ").append(ir.getData().getUUID()).append("\n");
                         });
-                        System.out.println("    } ");
+                        sb.append("\t} ");
+                        LOGGER.log(Level.INFO, sb.toString());
                     }
                 } catch (DAOFileWriterException ex) {
                     throw new DAOFileException(ex.getMessage(), ex);
@@ -300,7 +302,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
     }
 
     /**
-     * Mets le pointeur d'un tuple <code>rowPointer</code> à -1
+     * Passe l'attibut <code>dirty</code> du tuple à {@code  false}
      * pour éviter que le tuple soit écrit dans le fichier s'il est dans la
      * liste d'attente du processus qui écrit dans le fichier de données
      * <code>dataWriter</code>. Ensuite supprime les écoutes et rétire le tuple
@@ -310,7 +312,6 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
      */
     private void removeRowFromList(DataRow dataRow) {
         if (dataRow != null) {
-//            dataRow.setRowPointer(-1, false);
             dataRow.setDirty(false);
             Persistable data = (Persistable) dataRow.getData();
             map.remove(data.getUUID());

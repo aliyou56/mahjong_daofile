@@ -54,16 +54,20 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
         super(writer, FILE_HEADER_SIZE, 0);
     }
 
-//    /**
-//     * Change l'état d'un tuple lorsque l'état de l'objet encapsulé change.
-//     *
-//     * @param evt Evenement
-//     */
-//    @Override
-//    public void propertyChange(PropertyChangeEvent evt) {
-//        System.err.println("FileHeaderRow propertyvhange");
-//        setDirty(true);
-//    }
+    /**
+     * Change l'état d'un tuple lorsque l'état de l'objet encapsulé change.
+     *
+     * @param evt Evenement
+     */
+    @Override
+    public void propertyChange(PropertyChangeEvent evt) {
+        String propertyName = evt.getPropertyName();
+        if (propertyName.equals(FileHeader.ROW_NUMBER_PROPERTY)
+                || propertyName.equals(FileHeader.LAST_ROW_ID_PROPERTY)) {
+            setDirty(false);
+            setDirty(true);
+        }
+    }
     
     /**
      * Renvoie une en-tete de fichier <code>FileHeader</code> lue à partir d'un
@@ -79,7 +83,6 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
     @Override
     protected FileHeader readData(ByteBuffer buffer) throws DAOFileException {
         if (buffer.remaining() < FILE_HEADER_SIZE - 1) {
-//            return null;
             String message = "FileHader can't be read from the buffer '" + buffer + "'"
                     + "\n\t cause -> remaining bytes '" + buffer.remaining() + "' is less than FileHeader size '" + FILE_HEADER_SIZE + "'";
             LOGGER.log(Level.SEVERE, message);
@@ -103,7 +106,6 @@ public class FileHeaderRow extends AbstractRow<FileHeader> {
     @Override
     protected int writeData(ByteBuffer buffer) throws DAOFileException {
         if (buffer.remaining() < FILE_HEADER_SIZE) {
-//            return -1;
             String message = "Remianing bytes '" + buffer.remaining() + "' is less than FILE_HEADER_SIZE '"
                     + FILE_HEADER_SIZE +"'";
             throw new DAOFileException(message);

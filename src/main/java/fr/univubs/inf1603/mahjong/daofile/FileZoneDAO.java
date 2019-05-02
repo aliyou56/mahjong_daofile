@@ -29,56 +29,59 @@ import java.util.logging.Logger;
 public class FileZoneDAO extends FileDAOMahjong<TileZone> {
 
     /**
+     *  Contient l'Instance du DAO qui gère les zones.
+     */
+    private static FileZoneDAO instance;
+    
+    /**
      * Logging
      */
     private static final Logger LOGGER = Logger.getLogger(FileZoneDAO.class.getName());
     /**
      * Gestionnaire de liens entre les tuiles et les zones.
      */
-    private static LinkManager<GameTileInterface> tileToZoneLinkManager;
+    private final LinkManager<GameTileInterface> tileToZoneLinkManager;
     /**
      * Gestionnaire de liens entre les zones et les parties de Mahjong.
      */
-    private static LinkManager<TileZone> zoneToGameLinkManager;
+    private final LinkManager<TileZone> zoneToGameLinkManager;
 
     /**
-     * Constructeur avec un Chemin d'accès du répertoire racine
+     * Constructeur privé avec un Chemin d'accès du répertoire racine
      * <code>rootDirPath</code>.
      *
      * @param rootDirPath Chemin d'accès du répertoire racine. NE DOIT PAS ETRE
      * NULL.
      * @throws DAOFileException s'il ya une erreur lors de l'instanciation.
      */
-    FileZoneDAO(Path rootDirPath) throws DAOFileException {
+    private FileZoneDAO(Path rootDirPath) throws DAOFileException {
         super(rootDirPath, "zone.data", "zone.index", ZoneRow.ZONE_ROW_SIZE);
-//        System.out.println(" -> FileZoneDAO");
+        zoneToGameLinkManager = new ZoneToGameLinkManager(this);
+        tileToZoneLinkManager = FileTileDAO.getInstance(rootDirPath).getLinkManager();
+    }
+    
+    /**
+     * Renvoie l'instance du DAO qui gère les zones.
+     * 
+     * @param rootDir Chemin d'accès du répertoire racine. NE DOIT PAS ETRE
+     * NULL.
+     * @return L'instance du DAO qui gère les zones.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
+     */
+    static FileZoneDAO getInstance(Path rootDir) throws DAOFileException {
+        if(instance == null) {
+            instance = new FileZoneDAO(rootDir);
+        }
+        return instance;
     }
 
     /**
-     * Définit le gestionnaire de liens pour les zones et les parties de
-     * Mahjong.
-     *
-     * @param zoneToGameLinkManager Gestionnaire de liens pour les zones et les
-     * parties de Mahjong.
+     * @return Le gestionnaire de liens entre les zones et les parties de Mahjong.
      */
-    void setZoneLinkManager(LinkManager<TileZone> zoneToGameLinkManager) {
-        if (FileZoneDAO.zoneToGameLinkManager == null) {
-            FileZoneDAO.zoneToGameLinkManager = zoneToGameLinkManager;
-        }
+    LinkManager<TileZone> getLinkManager() {
+        return zoneToGameLinkManager;
     }
-
-    /**
-     * Définit le gestionnaire de liens pour les tuiles et les zones.
-     *
-     * @param tileToZoneLinkManager Gestionnaire de liens pour les tuiles et les
-     * zones.
-     */
-    void setTileLinkManager(LinkManager<GameTileInterface> tileToZoneLinkManager) {
-        if (FileZoneDAO.tileToZoneLinkManager == null) {
-            FileZoneDAO.tileToZoneLinkManager = tileToZoneLinkManager;
-        }
-    }
-
+    
     /**
      * {@inheritDoc}
      */
@@ -102,7 +105,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
      * @throws DAOException s'il y'a une erreur lors de la suppression.
      */
     @Override
-    protected void deleteFromPersistance(TileZone tileZone) throws DAOException {
+    protected void deleteFromPersistence(TileZone tileZone) throws DAOException {
         try {
             if (zoneToGameLinkManager.getRow(tileZone.getUUID()) == null) {
                     // suppression des tuiles qui sont dans la zone
@@ -112,7 +115,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
                             new Object[]{tileZone.getClass().getSimpleName(), tileZone.getUUID()});
                 }
             } else {
-                String message = "TileZone id=" + tileZone.getUUID() + " can't be deleted : "
+                String message = "TileZone id=" + tileZone.getUUID() + " can't be deleted"
                         + "\n\t cause -> it's linked to a game.";
                 LOGGER.log(Level.WARNING, message);
                 throw new DAOException(message);
@@ -122,15 +125,36 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void delete(List<TileZone> zones) throws DAOFileException {
         try {
             for (TileZone tz : zones) {
-                deleteFromPersistance(tz);
+                deleteFromPersistence(tz);
             }
         } catch (DAOException ex) {
             throw new DAOFileException(ex.getMessage(), ex);
         }
+    }
+
+    /**
+     * Cette classe represente le gestionnaire de liens entre les zones et les 
+     * parties de Mahjong.
+     */
+    class ZoneToGameLinkManager extends LinkManager<TileZone> {
+
+        /**
+         * Constructeur privé avec le DAO qui gère les zones.
+         * @param dao DAO qui gère les zones.
+         * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
+         */
+        ZoneToGameLinkManager(FileDAOMahjong<TileZone> dao) throws DAOFileException {
+            super(rootDirPath.resolve("zoneToGame.link"), dao);
+//            System.out.println("constructor : " + this);
+        }
+
     }
 
     /**
@@ -242,7 +266,6 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
         @Override
         protected int writeData(ByteBuffer buffer) throws DAOFileException {
             if (buffer.remaining() < ZONE_SIZE) {
-//                return -1;
                 String message = "Remianing bytes '" + buffer.remaining() + "' is less than ZONE_SIZE '"
                         + ZONE_SIZE + "'";
                 throw new DAOFileException(message);
@@ -253,7 +276,6 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
                 int nbTiles = getData().getTiles().size();
                 buffer.putInt(nbTiles);
                 DAOFileWriter.writeString(buffer, getData().getIdentifier().toString());
-//                System.out.println("writeData -> writedInFile : " + isWritedInFile());
                 if (!isWritedInFile()) { // première écriture dans le fichier de données
                     if (nbTiles != 0) {
                         tileToZoneLinkManager.addLink(getData().getUUID(), getData().getTiles());

@@ -27,10 +27,15 @@ import java.util.logging.Logger;
  * {@link FileTileDAO.TileRow}.
  *
  * @author aliyou, nesrine
- * @version 1.2.5
+ * @version 1.3.0
  */
 public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
-
+    
+    /**
+     *  Contient l'Instance du DAO qui gère les tuiles.
+     */
+    private static FileTileDAO instance;
+    
     /**
      * Logging
      */
@@ -39,30 +44,41 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
     /**
      * Gestionnaire de liens entre les tuiles et les zones.
      */
-    private static LinkManager<GameTileInterface> tileToZoneLinkManager;
+    private final LinkManager<GameTileInterface> tileToZoneLinkManager;
 
     /**
-     * Constructeur avec un Chemin d'accès du répertoire racine
+     * Constructeur privé avec un Chemin d'accès du répertoire racine
      * <code>rootDirPath</code>.
      *
      * @param rootDirPath Chemin d'accès du répertoire racine. NE DOIT PAS ETRE
      * NULL.
      * @throws DAOFileException s'il ya une erreur lors de l'instanciation.
      */
-    FileTileDAO(Path rootDirPath) throws DAOFileException {
+    private FileTileDAO(Path rootDirPath) throws DAOFileException {
         super(rootDirPath, "tile.data", "tile.index", TileRow.TILE_ROW_SIZE);
-//        System.out.println(" -> FileTileDAO");
+        tileToZoneLinkManager = new TileToZoneLinkManager(this);
     }
-
+    
     /**
-     * Définit le gestionnaire de liens.
-     *
-     * @param tileToZoneLinkManager Gestionnaire de liens.
+     * Renvoie l'instance du DAO qui gère les tuiles.
+     * 
+     * @param rootDir Chemin d'accès du répertoire racine. NE DOIT PAS ETRE
+     * NULL.
+     * @return L'instance du DAO qui gère les tuiles.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
      */
-    void setLinkManager(LinkManager<GameTileInterface> tileToZoneLinkManager) {
-        if (FileTileDAO.tileToZoneLinkManager == null) {
-            FileTileDAO.tileToZoneLinkManager = tileToZoneLinkManager;
+    static FileTileDAO getInstance(Path rootDir) throws DAOFileException {
+        if(instance == null) {
+            instance = new FileTileDAO(rootDir);
         }
+        return instance;
+    }
+    
+    /**
+     * @return Le gestionnaire de liens entre les tuiles et les zones.
+     */
+    LinkManager<GameTileInterface> getLinkManager() {
+        return tileToZoneLinkManager;
     }
 
     /**
@@ -82,14 +98,14 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
     }
 
     /**
-     * Supprime une tuile <code>GameTile</code> du fichier de données si la
+     * Supprime une tuile <code>GameTileInterface</code> du fichier de données si la
      * tuile n'est reliée à aucune zone <code>TileZone</code>.
      *
      * @param gameTile Tuile à supprimer.
      * @throws DAOException s'il y'a une erreur lors de la suppression.
      */
     @Override
-    protected void deleteFromPersistance(GameTileInterface gameTile) throws DAOException {
+    protected void deleteFromPersistence(GameTileInterface gameTile) throws DAOException {
         try {
             // on vérifie si la tuile n'est pas reliée à une zone
             if (tileToZoneLinkManager.getRow(gameTile.getUUID()) == null) {
@@ -106,8 +122,24 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
     }
 
     /**
+     * Cette classe represente le gestionnaire de liens entre les tuiles et les zones.
+     */
+    class TileToZoneLinkManager extends LinkManager<GameTileInterface> {
+
+        /**
+         * Constructeur privé avec le DAO qui gère les tuiles.
+         * @param dao DAO qui gère les tuiles.
+         * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
+         */
+        TileToZoneLinkManager(FileDAOMahjong<GameTileInterface> dao) throws DAOFileException {
+            super(rootDirPath.resolve("tileToZone.link"), dao);
+//            System.out.println("constructor : " + this);
+        }
+    }
+
+    /**
      * La classe <code>TileRow</code> répresente un tuple de tuile
-     * {@link GameTile}. C'est un conteneur pour une tuile.
+     * {@link GameTileInterface}. C'est un conteneur pour une tuile.
      *
      * <pre>
      *
@@ -120,15 +152,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
      *
      */
     class TileRow extends DataRow<GameTileInterface> {
-
-//        /**
-//         * Taille minimale d'une tuile en octet.
-//         * <pre>
-//         *       UUID=16 |        String=3      |  int=4 |       byte=1      |  byte=1    |    byte=1    | -> (Byte)
-//         *       tileID  | tileClassShortenName | gameID |  publicalyVisible | orientation|  wind/dragon |
-//         * </pre>
-//         */
-//        private static final int TILE_MIN_SIZE = 16 + 3 + 4 + 1 + 1 + 1;    // 26
+        
         /**
          * Taille d'une tuile en octet.
          */
@@ -176,18 +200,18 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
         @Override
         protected GameTileInterface readData(ByteBuffer buffer) throws DAOFileException {
             if (buffer.remaining() < TILE_SIZE) {
-//                return null;
                 String message = "Remianing bytes '" + buffer.remaining() + "' is less than TILE_SIZE '"
                         + TILE_SIZE + "'";
                 throw new DAOFileException(message);
             }
+            int startPosition = buffer.position();
             try {
                 UUID tileID = new UUID(buffer.getLong(), buffer.getLong());
-                AbstractTile abstractTile = null;
                 String type = DAOFileWriter.readString(buffer, 3);
                 int gameID = buffer.getInt();
                 boolean isPublicalyVisible = (buffer.get() == 1);
                 Wind orientation = getWind((char) buffer.get());
+                AbstractTile abstractTile = null;
                 char c = (char) buffer.get();
                 switch (TileClassSimpleName.getTileClassSimpleName(type)) {
                     case COMMONTILE:
@@ -209,6 +233,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
                 GameTileInterface data = new GameTile(gameID, abstractTile, tileID, isPublicalyVisible, orientation);
                 return data;
             } catch (DAOFileWriterException ex) {
+                buffer.position(startPosition);
                 throw new DAOFileException(ex.getMessage(), ex);
             }
         }
@@ -221,7 +246,6 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
         @Override
         protected int writeData(ByteBuffer buffer) throws DAOFileException {
             if (buffer.remaining() < TILE_SIZE) {
-//                return -1;
                 String message = "Remianing bytes '" + buffer.remaining() + "' is less than TILE_SIZE '"
                         + TILE_SIZE + "'";
                 throw new DAOFileException(message);

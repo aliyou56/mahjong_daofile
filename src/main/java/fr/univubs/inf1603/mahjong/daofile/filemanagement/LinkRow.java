@@ -8,8 +8,6 @@ import java.beans.PropertyChangeSupport;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Cette classe répresente un tuple qui encapsule un lien.
@@ -36,7 +34,8 @@ public class LinkRow extends AbstractRow<Link> {
      * @param rowID Identifiant d'un tuple
      * @param data Lien <code>LinkRow.Link</code> encapsulé dans un tuple.
      * @param rowPointer Pointeur d'un tuple.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException s'il y'a une erreur lors de l'instanciation.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * s'il y'a une erreur lors de l'instanciation.
      */
     public LinkRow(int rowID, Link data, long rowPointer) throws DAOFileException {
         super(rowID, data, LINK_SIZE, rowPointer);
@@ -50,7 +49,8 @@ public class LinkRow extends AbstractRow<Link> {
      * @param writer Processus qui éffectue des opérations d'entrée/sortie sur
      * un fichier
      * @param rowPointer Pointeur d'un tuple.
-     * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un lien.
+     * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un
+     * lien.
      */
     public LinkRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
         super(writer, LINK_SIZE, rowPointer);
@@ -76,11 +76,15 @@ public class LinkRow extends AbstractRow<Link> {
      * @param buffer Tampon d'octets à partir duquel le lien
      * <code>LinkRow.Link</code> est lu.
      * @return Le lien lu.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * s'il y'a une erreur lors de la lecture
      */
     @Override
-    protected Link readData(ByteBuffer buffer) {
+    protected Link readData(ByteBuffer buffer) throws DAOFileException {
         if (buffer.remaining() < LINK_SIZE) {
-            return null;
+            String message = "Remianing bytes '" + buffer.remaining() + "' is less than LINK_SIZE '"
+                    + LINK_SIZE + "'";
+            throw new DAOFileException(message);
         }
         UUID childID = new UUID(buffer.getLong(), buffer.getLong());
         UUID parentID = new UUID(buffer.getLong(), buffer.getLong());
@@ -98,7 +102,9 @@ public class LinkRow extends AbstractRow<Link> {
     @Override
     protected int writeData(ByteBuffer buffer) throws DAOFileException {
         if (buffer.remaining() < LINK_SIZE) {
-            return -1;
+            String message = "Remianing bytes '" + buffer.remaining() + "' is less than LINK_SIZE '"
+                    + LINK_SIZE + "'";
+            throw new DAOFileException(message);
         }
         try {
             int startPosition = buffer.position();
@@ -112,7 +118,6 @@ public class LinkRow extends AbstractRow<Link> {
 
     /**
      * Cette classe répresente un lien entre un objet parent et un objet enfant.
-     *
      */
     static class Link implements Persistable {
 
@@ -131,8 +136,8 @@ public class LinkRow extends AbstractRow<Link> {
         private UUID parentID;
 
         /**
-         * Constructeur avec l'identifiant d'un objet enfant et l'identifiant d'un
-         * objet parent.
+         * Constructeur avec l'identifiant d'un objet enfant et l'identifiant
+         * d'un objet parent.
          *
          * @param childID Identifiant d'un objet enfant
          * @param parentID Identifiant d'un objet parent
@@ -222,6 +227,6 @@ public class LinkRow extends AbstractRow<Link> {
             }
             return true;
         }
-        
+
     }
 }

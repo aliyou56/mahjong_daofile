@@ -142,7 +142,6 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
                 throw new DAOFileException(message);
             } 
             read(buffer);
-//            this.dirty = false;
         } catch (DAOFileWriterException ex) {
             String message = "Row could not be read from the file."
                     + "\n\t cause -> " + ex.getMessage();
@@ -166,7 +165,6 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
         this(dataSize, rowPointer);
         FileDAOUtilities.checkNotNull("buffer", buffer);
         read(buffer);
-//        this.dirty = false;
     }
 
     /**
@@ -220,7 +218,8 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
             }
             LOGGER.log(Level.FINE, "startPosition : {0}, nbWritedBytes : {1}, endPosition : {2}, rowSize : {3}, dataType : {4}",
                     new Object[]{startPosition, nbWritedBytes, buffer.position(), getRowSize(), this.data.getClass().getSimpleName()});
-            setDirty(false);
+            dirty = false;
+//            setDirty(false);
             return ROW_HEADER_SIZE + nbWritedBytes;
         } catch (DAOFileException ex) {
             buffer.position(startPosition);
@@ -300,26 +299,22 @@ public abstract class AbstractRow<T extends MahjongObservable> implements Mahjon
     }
 
     /**
-     * Modifie le pointeur d'un tuple. Si le pointeur de tuple est égal à -1, le
-     * tuple n'est pas écrit dans un fichier. La valeur -1 est utilisée pour
-     * éviter qu'un tuple présent dans une liste d'attente pour etre écrit dans
-     * un fichier ne soit écrit lorsque le tuple est supprimé alors qu'il est
-     * toujours dans la liste.
+     * Modifie le pointeur d'un tuple. 
      *
      * @param rowPointer Nouveau pointeur d'un tuple. DOIT ETRE SUPERIEUR OU
-     * EGAL A -1.
-     * @param notifyWriter si <code>true</code> Notifie le writer du tuple. Et
+     * EGAL A 0.
+     * @param dirty si <code>true</code> Notifie le writer du tuple. Et
      * le tuple est écrit dans un fichier.
      */
-    public void setRowPointer(long rowPointer, boolean notifyWriter) {
-        if (rowPointer < -1) {
+    public void setRowPointer(long rowPointer, boolean dirty) {
+        if (rowPointer < 0) {
             String message = "Row pointer didn't changed. "
-                    + "\n\t cause -> newRowPointer '" + rowPointer + "' is less than -1.";
+                    + "\n\t cause -> newRowPointer '" + rowPointer + "' is less than 0.";
             LOGGER.log(Level.WARNING, message);
         } else {
             if (this.rowPointer != rowPointer) {
                 this.rowPointer = rowPointer;
-                if (notifyWriter) {
+                if (dirty) {
                     setDirty(true);
                 }
             }

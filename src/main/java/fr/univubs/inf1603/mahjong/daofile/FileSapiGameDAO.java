@@ -1,6 +1,5 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.SapiGameDAO;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
@@ -9,7 +8,6 @@ import fr.univubs.inf1603.mahjong.daofile.filemanagement.AbstractRow;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.DAOFileWriter;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.DataRow;
 import fr.univubs.inf1603.mahjong.daofile.filemanagement.FileHeaderRow;
-import fr.univubs.inf1603.mahjong.engine.game.Game;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongGame;
 import fr.univubs.inf1603.mahjong.sapi.Difficulty;
 import fr.univubs.inf1603.mahjong.sapi.impl.SapiGame;
@@ -28,10 +26,15 @@ import java.util.logging.Logger;
  * {@code SapiGame} {@link FileSapiGameDAO.SapiGameRow}.
  *
  * @author aliyou, nesrine
- * @version 1.2.5
+ * @version 1.3.0
  */
 public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGameDAO, Serializable {
 
+    /**
+     *  Contient l'Instance du DAO qui gère les objets {@code SapiGame}.
+     */
+    private static FileSapiGameDAO instance;
+    
     /**
      * Logging
      */
@@ -40,7 +43,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
     /**
      * DAO qui gère les parties de Mahjong {@code Game}.
      */
-    private static DAO<Game> gameDAO = null;
+    private final FileGameDAO gameDAO;
 
     /**
      * Tableau associatif gardant le lien entre les noms de parties et les
@@ -49,7 +52,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
     private HashMap<String, UUID> mapGameNameUUID;
 
     /**
-     * Constructeur avec un Chemin d'accès du répertoire racine
+     * Constructeur privé avec un Chemin d'accès du répertoire racine
      * <code>rootDirPath</code>.
      *
      * @param rootDirPath Chemin d'accès du répertoire racine. NE DOIT PAS ETRE
@@ -57,17 +60,35 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      * @param gameDAO DAO qui gère les parties.
      * @throws DAOFileException s'il ya une erreur lors de l'instanciation.
      */
-    public FileSapiGameDAO(Path rootDirPath, DAO<Game> gameDAO) throws DAOFileException {
+    private FileSapiGameDAO(Path rootDirPath) throws DAOFileException {
         super(rootDirPath, "sapiGame.data", "sapiGame.index", SapiGameRow.SAPI_GAME_ROW_SIZE);
-//        System.out.println(" -> FileSapiGameDAO");
-        FileSapiGameDAO.gameDAO = gameDAO;
+        gameDAO = FileGameDAO.getInstance(rootDirPath);
         this.mapGameNameUUID = new HashMap<>();
     }
+    
+    /**
+     * Renvoie l'instance du DAO qui gère les objets {@code SapiGame}.
+     * 
+     * @param rootDir Chemin d'accès du répertoire racine. NE DOIT PAS ETRE
+     * NULL.
+     * @return L'instance du DAO qui gère les objets {@code SapiGame}.
+     * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
+     */
+    static FileSapiGameDAO getInstance(Path rootDir) throws DAOFileException {
+        if(instance == null) {
+            instance = new FileSapiGameDAO(rootDir);
+        }
+        return instance;
+    }
 
+    /**
+     * Charge les noms de tous les parties de Mahjong persistés. Les noms sont
+     * gardés dans un tableau associatif avec les identifiants comme valeur.
+     */
     private void fillMap() {
         long rowPointer = FileHeaderRow.FILE_HEADER_ROW_SIZE + AbstractRow.ROW_HEADER_SIZE;
         int lenght = 16 + 54;
-        LOGGER.log(Level.INFO, "rowNumber : {0} | mapName size : {1} | lenght : {2} ",
+        LOGGER.log(Level.INFO, "rowNumber : {0} | mapNameUUID size : {1} | lenght : {2} ",
                 new Object[]{getRowNumber(), mapGameNameUUID.size(), lenght});
         if (getRowNumber() > mapGameNameUUID.size()) {
             for (int i = 0; i < getRowNumber(); i++) {
@@ -155,7 +176,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      * @throws DAOException s'il y'a une erreur lors de la suppression.
      */
     @Override
-    protected void deleteFromPersistance(SapiGame sapiGame) throws DAOException {
+    protected void deleteFromPersistence(SapiGame sapiGame) throws DAOException {
         try {
             if (mapGameNameUUID.containsKey(sapiGame.getName())) {
                 mapGameNameUUID.remove(sapiGame.getName());

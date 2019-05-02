@@ -1,6 +1,5 @@
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.daofile.FileDAOMahjong;
 import static fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities.checkNotNull;
@@ -60,23 +59,23 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
     /**
      * DAO gérant les objets enfants du lien.
      */
-    private FileDAOMahjong<T> dao = null;
-
+    private final FileDAOMahjong<T> dao;
+    
     /**
      * Constructeur avec le chemin d'accès du fichier de lien.
      *
      * @param linkFilePath Chemin d'accès du fichier de lien.
+     * @param dao DAO gérant les objets enfants du lien.
      * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
      */
-    public LinkManager(Path linkFilePath) throws DAOFileException {
+    public LinkManager(Path linkFilePath, FileDAOMahjong<T> dao) throws DAOFileException {
         super(linkFilePath, LinkRow.LINK_ROW_SIZE);
-//        System.out.println(" -> LinkManager");
+        this.dao = dao;
         this.mapParentChild = new HashMap<>();
         getRowsSortedByRowPointer().forEach((row) -> {
             Link link = (Link) row.getData();
             putInMap(link);
         });
-//        printMap();
     }
 
     /**
@@ -84,15 +83,6 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      */
     public FileDAOMahjong<T> getDAO() {
         return dao;
-    }
-
-    /**
-     * Définit le DAO à utiliser.
-     *
-     * @param dao DAO gerant des objets <code>T</code>.
-     */
-    public void setDAO(DAO<T> dao) {
-        this.dao = (FileDAOMahjong<T>) dao;
     }
 
     /**

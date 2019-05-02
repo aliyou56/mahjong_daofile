@@ -2,7 +2,6 @@ package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.Wind;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
-import fr.univubs.inf1603.mahjong.dao.DAOManager;
 import fr.univubs.inf1603.mahjong.engine.game.GameException;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongBoard;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongGame;
@@ -17,7 +16,7 @@ import java.util.HashMap;
 import java.util.UUID;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import fr.univubs.inf1603.mahjong.dao.SapiGameDAO;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.sapi.Difficulty;
 import fr.univubs.inf1603.mahjong.sapi.impl.SapiGame;
 import java.util.ArrayList;
@@ -29,33 +28,32 @@ import java.util.List;
  * @author aliyou
  * @version 1.2.5
  */
-public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
+public class FileSapiGameTest extends FileDAOMahjongTest<SapiGame> {
 
     public FileSapiGameTest() {
         System.out.println("FileSapiGameDAOTest");
     }
 
     @Test
-    public void testSave() throws DAOException, RulesException, MoveException, GameException, InterruptedException {
+    public void testSave() throws DAOException, RulesException, MoveException, GameException, InterruptedException, DAOFileException {
         SapiGame sapiGame1 = new SapiGame("Game1", Difficulty.EASY, createGame(new UUID(0, 245)));
         SapiGame sapiGame2 = new SapiGame("Game2", Difficulty.HARD, createGame(new UUID(0, 255)));
         SapiGame sapiGame3 = new SapiGame("Game3", Difficulty.MEDIUM, createGame(new UUID(0, 278)));
         SapiGame sapiGame4 = new SapiGame("Game4", Difficulty.SILLY, createGame(new UUID(0, 293)));
 
-        DAOManager manager = FileDAOManager.getInstance(rootDir);
-        SapiGameDAO dao = manager.getSapiGameDao();
+        FileSapiGameDAO dao = FileSapiGameDAO.getInstance(rootDir);
 
         dao.save(sapiGame1);
         dao.save(sapiGame2);
         dao.save(sapiGame3);
         dao.save(sapiGame4);
         if (TEST_WITH_FILE_WRITING) {
-            Thread.sleep(10000);
+            Thread.sleep(14000);
         }
-        testSapiGame(sapiGame1, dao.find(sapiGame1.getName()));
-        testSapiGame(sapiGame2, dao.find(sapiGame2.getUUID()));
-        testSapiGame(sapiGame3, dao.find(sapiGame3.getName()));
-        testSapiGame(sapiGame4, dao.find(sapiGame4.getUUID()));
+        compare(sapiGame1, dao.find(sapiGame1.getName()));
+        compare(sapiGame2, dao.find(sapiGame2.getUUID()));
+        compare(sapiGame3, dao.find(sapiGame3.getName()));
+        compare(sapiGame4, dao.find(sapiGame4.getUUID()));
     }
 
     /**
@@ -63,9 +61,8 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
      * @throws java.lang.InterruptedException
      */
     @Test
-    public void testDelete() throws DAOException, InterruptedException {
-        DAOManager manager = FileDAOManager.getInstance(rootDir);
-        SapiGameDAO dao = manager.getSapiGameDao();
+    public void testDelete() throws DAOException, InterruptedException, DAOFileException {
+        FileSapiGameDAO dao = FileSapiGameDAO.getInstance(rootDir);
         super.testDelete(dao, new UUID(0, 278));
         super.testDelete(dao, new UUID(0, 293));
         super.testDelete(dao, new UUID(0, 245));
@@ -84,11 +81,10 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
      * @throws java.lang.InterruptedException
      */
     @Test
-    public void testLoadPersistedNames() throws DAOException, RulesException, GameException, InterruptedException {
+    public void testLoadPersistedNames() throws DAOException, RulesException, GameException, InterruptedException, DAOFileException {
         System.out.println("loadPersistedNames");
-
-        DAOManager manager = FileDAOManager.getInstance(rootDir);
-        SapiGameDAO dao = manager.getSapiGameDao();
+        
+        FileSapiGameDAO dao = FileSapiGameDAO.getInstance(rootDir);
 
         assertEquals(new ArrayList<>(), dao.loadPersistedNames());
 
@@ -133,11 +129,10 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
      * @throws java.lang.InterruptedException
      */
     @Test
-    public void testLoadPersistedUUIDs() throws DAOException, RulesException, GameException, InterruptedException {
+    public void testLoadPersistedUUIDs() throws DAOException, RulesException, GameException, InterruptedException, DAOFileException {
         System.out.println("loadPersistedUUIDs");
-
-        DAOManager manager = FileDAOManager.getInstance(rootDir);
-        SapiGameDAO dao = manager.getSapiGameDao();
+        
+        FileSapiGameDAO dao = FileSapiGameDAO.getInstance(rootDir);
 
         assertEquals(new ArrayList<>(), dao.loadPersistedUUIDs());
 
@@ -182,11 +177,10 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
      * @throws java.lang.InterruptedException
      */
     @Test
-    public void testFind_String() throws DAOException, RulesException, GameException, InterruptedException {
-        System.out.println("find_String");
-
-        DAOManager manager = FileDAOManager.getInstance(rootDir);
-        SapiGameDAO dao = manager.getSapiGameDao();
+    public void testFind() throws DAOException, RulesException, GameException, InterruptedException, DAOFileException {
+        System.out.println("find");
+        
+        FileSapiGameDAO dao = FileSapiGameDAO.getInstance(rootDir);
 
         String name1 = "testFindGameByName1";
         String name2 = "testFindGameByName2";
@@ -198,8 +192,8 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
             Thread.sleep(10000); // Attendre que les données s'écrivent sur le disk.
         }
 
-        testSapiGame(sapiGame1, dao.find(name1));
-        testSapiGame(sapiGame2, dao.find(name2));
+        compare(sapiGame1, dao.find(name1));
+        compare(sapiGame2, dao.find(name2));
 
         dao.delete(sapiGame1);
         dao.delete(sapiGame2);
@@ -208,19 +202,11 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         }
     }
 
-    private void testSapiGame(SapiGame sp1, SapiGame sp2) {
-        assertEquals(sp1.getUUID(), sp2.getUUID());
-        assertEquals(sp1.getName(), sp2.getName());
-        assertEquals(sp1.getSurrenderDifficulty(), sp2.getSurrenderDifficulty());
-        assertEquals(sp1.getGame().getUUID(), sp2.getGame().getUUID());
-    }
-
     @Test
-    public void testDelete_String() throws DAOException, RulesException, GameException, InterruptedException {
-        System.out.println("fdelete_String");
-
-        DAOManager manager = FileDAOManager.getInstance(rootDir);
-        SapiGameDAO dao = manager.getSapiGameDao();
+    public void testDelete_String() throws DAOException, RulesException, GameException, InterruptedException, DAOFileException {
+        System.out.println("delete_String");
+        
+        FileSapiGameDAO dao = FileSapiGameDAO.getInstance(rootDir);
 
         String name1 = "testDeleteGameByName1";
         String name2 = "testDeleteGameByName2";
@@ -240,10 +226,9 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
 
         assertNull(dao.find(name1));
         assertNull(dao.find(name2));
-
     }
 
-    private MahjongGame createGame(UUID gameID) throws RulesException, MoveException, GameException {
+    private MahjongGame createGame(UUID gameID) throws RulesException, GameException {
         GameRuleFactory ruleFactory = new GameRuleFactory();
         GameRule rule = ruleFactory.create("INTERNATIONAL");
 //        MahjongBoard board = new MahjongBoard(Wind.WEST);
@@ -259,5 +244,14 @@ public class FileSapiGameTest extends FileDAOMahJongTest<SapiGame> {
         MahjongGame game = new MahjongGame(rule, board, lastPlayedMove, Duration.ofMillis(4000), Duration.ofMillis(4000),
                 playerPoints, gameID, playerWind);
         return game;
+    }
+    
+    @Override
+    protected boolean compare(SapiGame sp1, SapiGame sp2) {
+        assertEquals(sp1.getUUID(), sp2.getUUID());
+        assertEquals(sp1.getName(), sp2.getName());
+        assertEquals(sp1.getSurrenderDifficulty(), sp2.getSurrenderDifficulty());
+        assertEquals(sp1.getGame().getUUID(), sp2.getGame().getUUID());
+            return true;
     }
 }

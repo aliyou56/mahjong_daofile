@@ -1,9 +1,8 @@
 package fr.univubs.inf1603.mahjong.daofile;
 
 import fr.univubs.inf1603.mahjong.Wind;
-import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
-import fr.univubs.inf1603.mahjong.dao.DAOManager;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.engine.game.Game;
 import fr.univubs.inf1603.mahjong.engine.game.GameException;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongBoard;
@@ -17,6 +16,8 @@ import fr.univubs.inf1603.mahjong.engine.rule.RulesException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.AfterClass;
 import org.junit.Test;
 
@@ -24,7 +25,7 @@ import org.junit.Test;
  *
  * @author aliyou
  */
-public class FileGameDAOTest extends FileDAOMahJongTest<Game> {
+public class FileGameDAOTest extends FileDAOMahjongTest<Game> {
 
     public FileGameDAOTest() {
         System.out.println("FileGameDAOTest");
@@ -42,15 +43,14 @@ public class FileGameDAOTest extends FileDAOMahJongTest<Game> {
      * @throws fr.univubs.inf1603.mahjong.engine.game.MoveException
      */
     @Test
-    public void testSave() throws DAOException, RulesException, MoveException, GameException {
+    public void testSave() throws DAOException, RulesException, GameException, DAOFileException {
         try {
             Game game1 = createGame(new UUID(0, 451));
             Game game2 = createGame(new UUID(0, 452));
             Game game3 = createGame(new UUID(0, 453));
             Game game4 = createGame(new UUID(0, 454));
-
-            DAOManager manager = FileDAOManager.getInstance(rootDir);
-            DAO<Game> dao = manager.getGameDao();
+            
+            FileGameDAO dao = FileGameDAO.getInstance(rootDir);
 
             super.testSave(dao, game1);
             super.testSave(dao, game2);
@@ -58,7 +58,7 @@ public class FileGameDAOTest extends FileDAOMahJongTest<Game> {
             super.testSave(dao, game4);
 
             if (TEST_WITH_FILE_WRITING) {
-                Thread.sleep(7000);
+                Thread.sleep(14000);
             }
 
         } catch (InterruptedException ex) {
@@ -72,10 +72,9 @@ public class FileGameDAOTest extends FileDAOMahJongTest<Game> {
      * @throws fr.univubs.inf1603.mahjong.dao.DAOException
      */
     @Test
-    public void testDelete() throws DAOException {
+    public void testDelete() throws DAOException, DAOFileException {
         try {
-            DAOManager manager = FileDAOManager.getInstance(rootDir);
-            DAO<Game> dao = manager.getGameDao();
+            FileGameDAO dao = FileGameDAO.getInstance(rootDir);
             super.testDelete(dao, new UUID(0, 453));
             super.testDelete(dao, new UUID(0, 452));
             super.testDelete(dao, new UUID(0, 451));
@@ -113,7 +112,7 @@ public class FileGameDAOTest extends FileDAOMahJongTest<Game> {
 //    }
     
 
-    private MahjongGame createGame(UUID gameID) throws RulesException, MoveException, GameException {
+    private MahjongGame createGame(UUID gameID) throws RulesException, GameException {
         GameRuleFactory ruleFactory = new GameRuleFactory();
         GameRule rule = ruleFactory.create("INTERNATIONAL");
 //        MahjongBoard board = new MahjongBoard(Wind.WEST);
@@ -129,5 +128,36 @@ public class FileGameDAOTest extends FileDAOMahJongTest<Game> {
         MahjongGame game = new MahjongGame(rule, board, lastPlayedMove, Duration.ofMillis(4000), Duration.ofMillis(4000),
                 playerPoints, gameID, playerWind);
         return game;
+    }
+    
+    @Override
+    protected boolean compare(Game obj1, Game obj2) {
+        if ((obj1 == null && obj2 != null)
+                || (obj1 != null && obj2 == null)) {
+            return false;
+        } else if ((obj1 == null && obj2 == null)) {
+            return true;
+        } else {
+            if (obj1.getUUID().compareTo(obj2.getUUID()) != 0) {
+                return false;
+            }
+            try {
+                if (obj1.getCurrentwind().toString().equals(obj2.getCurrentwind().toString())  ) {
+                    return false;
+                }
+            } catch (GameException ex) {
+                Logger.getLogger(FileGameDAOTest.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            if (obj1.getPlayingTime() != obj2.getPlayingTime()) {
+                return false;
+            }
+            if (obj1.getStealingTime() != obj2.getStealingTime()) {
+                return false;
+            }
+            if (obj1.getRule().getName().equals(obj2.getRule().getName())) {
+                return false;
+            }
+            return true;
+        }
     }
 }

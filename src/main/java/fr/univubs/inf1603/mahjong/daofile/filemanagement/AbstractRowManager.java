@@ -162,7 +162,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
             }
             LOGGER.log(Level.FINE, "{0} tuples charg\u00e9s.", _nbRecords);
             return _nbRecords;
-        } catch (DAOFileWriterException | DAOFileException ex) {
+        } catch (DAOFileException ex) {
             throw new DAOFileException(ex.getMessage());
         }
     }
@@ -235,8 +235,8 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
         if (row != null) {
             int pointer = (int) row.getRowPointer();
             T realRow = createRow(row.getRowPointer());
-            LOGGER.log(Level.FINE, "[INFO] row to delete : {0}", row);
-            LOGGER.log(Level.FINE, "[INFO] real row at the position in the file : {0}", realRow.getData());
+            LOGGER.log(Level.FINE, "row to delete : {0}", row);
+            LOGGER.log(Level.FINE, "real row at the position in the file : {0}", realRow.getData());
             if (((UniqueIdentifiable) realRow.getData()).getUUID().compareTo(((UniqueIdentifiable) row.getData()).getUUID()) == 0) {
                 removeRowFromList(row);
                 updateRowsPointer(pointer, rowSize);
@@ -289,7 +289,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     }
 
     /**
-     * Mets le pointeur d'un tuple <code>T</code> à <code>-1</code> pour éviter
+     * Passe l'attibut <code>dirty</code> du tuple à {@code  false} pour éviter
      * qu'il soit écrit dans le fichier s'il est dans la liste d'attente du
      * processus qui écrit dans le fichier. Supprime les écoutes et retire le
      * tuple des listes de tuples. Et enfin décremente le nombre total de tuples
@@ -298,7 +298,6 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * @param row Tuple à retirer.
      */
     protected void removeRowFromList(T row) {
-//        row.setRowPointer(-1, false);
         row.setDirty(false);
         row.getData().removePropertyChangeListener(row);
         row.removePropertyChangeListener(rowWriter);

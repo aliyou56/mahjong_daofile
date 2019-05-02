@@ -18,6 +18,9 @@ public abstract class DataRow<T extends Persistable> extends AbstractRow<T> {
      */
     private final Index index;
 
+    /**
+     * Indique si le tuple a déjà été écrit dans un fichier de données.
+     */
     private boolean writedInFile;
 
     /**
@@ -48,7 +51,9 @@ public abstract class DataRow<T extends Persistable> extends AbstractRow<T> {
 
     /**
      * Indique si un tuple a déjà été écrit dans un fichier de données.
-     * @return {@code true} si un si le tuple a déjà été écrit dans un fichier de données.
+     *
+     * @return {@code true} si un si le tuple a déjà été écrit dans un fichier
+     * de données.
      */
     protected boolean isWritedInFile() {
         return writedInFile;

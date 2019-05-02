@@ -4,7 +4,8 @@ import fr.univubs.inf1603.mahjong.Wind;
 import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
 import fr.univubs.inf1603.mahjong.dao.DAOManager;
-import static fr.univubs.inf1603.mahjong.daofile.FileDAOMahJongTest.rootDir;
+import static fr.univubs.inf1603.mahjong.daofile.FileDAOMahjongTest.rootDir;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.engine.game.GameTile;
 import fr.univubs.inf1603.mahjong.engine.game.GameTileInterface;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongTileZone;
@@ -26,7 +27,7 @@ import org.junit.Test;
  *
  * @author aliyou, nesrine
  */
-public class FileZoneDAOTest extends FileDAOMahJongTest<TileZone> {
+public class FileZoneDAOTest extends FileDAOMahjongTest<TileZone> {
 
     public FileZoneDAOTest() {
         System.out.println("FileZoneDAOTest");
@@ -38,7 +39,7 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<TileZone> {
      * @throws fr.univubs.inf1603.mahjong.dao.DAOException
      */
     @Test
-    public void testSave() throws DAOException {
+    public void testSave() throws DAOException, DAOFileException {
         try {
             TileZone zone0 = new MahjongTileZone(createRandomTiles(91), new UUID(0, 10), TileZoneIdentifier.Wall); //91
             TileZone zone1 = new MahjongTileZone(createRandomTiles(14), new UUID(0, 11), TileZoneIdentifier.HandEast);
@@ -46,21 +47,81 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<TileZone> {
             TileZone zone3 = new MahjongTileZone(createRandomTiles(13), new UUID(0, 13), TileZoneIdentifier.HandSouth);
             TileZone zone4 = new MahjongTileZone(createRandomTiles(13), new UUID(0, 14), TileZoneIdentifier.HandWest);
 
-            DAOManager manager = FileDAOManager.getInstance(rootDir);
-            DAO<TileZone> dao = manager.getZoneDao();
+            FileZoneDAO dao = FileZoneDAO.getInstance(rootDir);
+            
             super.testSave(dao, zone0);
             super.testSave(dao, zone1);
             super.testSave(dao, zone2);
             super.testSave(dao, zone3);
             super.testSave(dao, zone4);
             if (TEST_WITH_FILE_WRITING) {
-                Thread.sleep(12000);
+                Thread.sleep(10000);
             }
         } catch (InterruptedException ex) {
             Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
+
+    /**
+     * Test of delete method, of class FileZoneDAO.
+     *
+     * @throws fr.univubs.inf1603.mahjong.dao.DAOException
+     */
+    @Test
+    public void testDelete() throws DAOException, DAOFileException {
+        try {
+            FileZoneDAO dao = FileZoneDAO.getInstance(rootDir);
+            
+            super.testDelete(dao, new UUID(0, 11));
+            super.testDelete(dao, new UUID(0, 13));
+            super.testDelete(dao, new UUID(0, 10));
+            super.testDelete(dao, new UUID(0, 14));
+            super.testDelete(dao, new UUID(0, 12));
+            if (TEST_WITH_FILE_WRITING) {
+                Thread.sleep(6000);
+            }
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    @Test
+    public void testUpdate() throws DAOException, InterruptedException, DAOFileException {
+        System.out.println("testUpdate");
+        if (TEST_WITH_FILE_WRITING) {
+        MahjongTileZone zone0 = new MahjongTileZone(createRandomTiles(4), new UUID(0, 110), TileZoneIdentifier.Wall); //91
+        MahjongTileZone zone1 = new MahjongTileZone(createRandomTiles(2), new UUID(0, 111), TileZoneIdentifier.HandEast);
+
+        FileZoneDAO dao = FileZoneDAO.getInstance(rootDir);
+        
+        super.testSave(dao, zone0);
+        super.testSave(dao, zone1);
+        if (TEST_WITH_FILE_WRITING) {
+            Thread.sleep(8000);
+        }
+
+        GameTile t1 = (GameTile) zone0.getTiles().get(0);
+        GameTile t2 = (GameTile) zone0.getTiles().get(1);
+        zone0.removeTile(t1);
+        zone0.removeTile(t2);
+        Thread.sleep(7000);
+
+        zone1.addTile(t2);
+        zone1.addTile(t1);
+        if (TEST_WITH_FILE_WRITING) {
+            Thread.sleep(10000);
+        }
+
+        super.testDelete(dao, new UUID(0, 111));
+        super.testDelete(dao, new UUID(0, 110));
+        if (TEST_WITH_FILE_WRITING) {
+            Thread.sleep(6000);
+        }
+        }
+    }
+    
+    
     private ArrayList<GameTileInterface> createRandomTiles(int nb) {
         ArrayList<GameTileInterface> tiles = new ArrayList<>();
         for (int i = 0; i < nb; i++) {
@@ -99,62 +160,25 @@ public class FileZoneDAOTest extends FileDAOMahJongTest<TileZone> {
         int index = ThreadLocalRandom.current().nextInt(0, 23 + 1);
         return tiles[index];
     }
-
-    /**
-     * Test of delete method, of class FileZoneDAO.
-     *
-     * @throws fr.univubs.inf1603.mahjong.dao.DAOException
-     */
-    @Test
-    public void testDelete() throws DAOException {
-        try {
-            DAOManager manager = FileDAOManager.getInstance(rootDir);
-            DAO<TileZone> dao = manager.getZoneDao();
-            super.testDelete(dao, new UUID(0, 11));
-            super.testDelete(dao, new UUID(0, 13));
-            super.testDelete(dao, new UUID(0, 10));
-            super.testDelete(dao, new UUID(0, 14));
-            super.testDelete(dao, new UUID(0, 12));
-            if (TEST_WITH_FILE_WRITING) {
-                Thread.sleep(6000);
+    
+    @Override
+    protected boolean compare(TileZone obj1, TileZone obj2) {
+        if ((obj1 == null && obj2 != null)
+                || (obj1 != null && obj2 == null)) {
+            return false;
+        } else if ((obj1 == null && obj2 == null)) {
+            return true;
+        } else {
+            if (obj1.getUUID().compareTo(obj2.getUUID()) != 0) {
+                return false;
             }
-        } catch (InterruptedException ex) {
-            Logger.getLogger(FileTileDAOTest.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    @Test
-    public void testUpdate() throws DAOException, InterruptedException {
-        System.out.println("testUpdate");
-        if (TEST_WITH_FILE_WRITING) {
-        MahjongTileZone zone0 = new MahjongTileZone(createRandomTiles(4), new UUID(0, 110), TileZoneIdentifier.Wall); //91
-        MahjongTileZone zone1 = new MahjongTileZone(createRandomTiles(2), new UUID(0, 111), TileZoneIdentifier.HandEast);
-
-        DAOManager manager = FileDAOManager.getInstance(rootDir);
-        DAO<TileZone> dao = manager.getZoneDao();
-        super.testSave(dao, zone0);
-        super.testSave(dao, zone1);
-        if (TEST_WITH_FILE_WRITING) {
-            Thread.sleep(8000);
-        }
-
-        GameTile t1 = (GameTile) zone0.getTiles().get(0);
-        GameTile t2 = (GameTile) zone0.getTiles().get(1);
-        zone0.removeTile(t1);
-        zone0.removeTile(t2);
-        Thread.sleep(7000);
-
-        zone1.addTile(t2);
-        zone1.addTile(t1);
-        if (TEST_WITH_FILE_WRITING) {
-            Thread.sleep(10000);
-        }
-
-        super.testDelete(dao, new UUID(0, 111));
-        super.testDelete(dao, new UUID(0, 110));
-        if (TEST_WITH_FILE_WRITING) {
-            Thread.sleep(6000);
-        }
+            if (obj1.getIdentifier() != obj2.getIdentifier()) {
+                return false;
+            }
+            if (obj1.getTiles().size() != obj2.getTiles().size()) {
+                return false;
+            }
+            return true;
         }
     }
 }

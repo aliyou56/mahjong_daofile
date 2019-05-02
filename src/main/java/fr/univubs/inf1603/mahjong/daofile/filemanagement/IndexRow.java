@@ -2,10 +2,8 @@ package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException;
-import java.beans.PropertyChangeEvent;
 import java.nio.ByteBuffer;
 import java.util.UUID;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -36,7 +34,8 @@ public class IndexRow extends AbstractRow<Index> {
      * @param rowID Identifiant d'un tuple
      * @param data Index encapsulé dans le tuple.
      * @param rowPointer Pointeur du tuple.
-     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException s'il y'a une erreur lors de l'instanciation.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * s'il y'a une erreur lors de l'instanciation.
      */
     public IndexRow(int rowID, Index data, long rowPointer) throws DAOFileException {
         super(rowID, data, INDEX_SIZE, rowPointer);
@@ -50,7 +49,8 @@ public class IndexRow extends AbstractRow<Index> {
      * @param writer Processus qui éffectue des opérations d'entrée/sortie sur
      * un fichier.
      * @param rowPointer Pointeur d'un tuple.
-     * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un index.
+     * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un
+     * index.
      */
     public IndexRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
         super(writer, INDEX_SIZE, rowPointer);
@@ -62,35 +62,29 @@ public class IndexRow extends AbstractRow<Index> {
      * @param buffer Tampon d'octets à partir duquel un index
      * <code>IndexRow.Index</code> est lu.
      * @param rowPointer Pointeur d'un tuple.
-     * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un index.
+     * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un
+     * index.
      */
     IndexRow(ByteBuffer buffer, long rowPointer) throws DAOFileException {
         super(buffer, INDEX_SIZE, rowPointer);
     }
-//
-//    /**
-//     * Change l'état d'un tuple lorsque l'état de l'objet encapsulé change.
-//     *
-//     * @param evt Evenement
-//     */
-//    @Override
-//    public void propertyChange(PropertyChangeEvent evt) {
-//        System.err.println("IndexRow propertyvhange");
-//        setDirty(true);
-//    }
-//    
+
     /**
-     * Renvoie un index <code>IndexRow.Index</code> lu à partir d'un tampon d'octets
-     * <code>buffer</code>.
+     * Renvoie un index <code>IndexRow.Index</code> lu à partir d'un tampon
+     * d'octets <code>buffer</code>.
      *
      * @param buffer Tampon d'octets à partir duquel un index
      * <code>IndexRow.Index</code> est lu.
      * @return L'index lu.
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * s'il y'a une erreur lors de la lecture
      */
     @Override
-    protected Index readData(ByteBuffer buffer) {
+    protected Index readData(ByteBuffer buffer) throws DAOFileException {
         if (buffer.remaining() < INDEX_SIZE) {
-            return null;
+            String message = "Remianing bytes '" + buffer.remaining() + "' is less than INDEX_SIZE '"
+                    + INDEX_SIZE + "'";
+            throw new DAOFileException(message);
         }
         UUID dataID = new UUID(buffer.getLong(), buffer.getLong());
         long dataPointer = buffer.getLong();
@@ -108,14 +102,17 @@ public class IndexRow extends AbstractRow<Index> {
     @Override
     protected int writeData(ByteBuffer buffer) throws DAOFileException {
         if (buffer.remaining() < INDEX_SIZE) {
-            return -1;
+            String message = "Remianing bytes '" + buffer.remaining() + "' is less than INDEX_SIZE '"
+                    + INDEX_SIZE + "'";
+            throw new DAOFileException(message);
         }
+        int startPosition = buffer.position();
         try {
-            int startPosition = buffer.position();
             DAOFileWriter.writeUUID(buffer, getData().getUUID());
             buffer.putLong(getData().getDataPointer());
             return buffer.position() - startPosition;
         } catch (DAOFileWriterException ex) {
+            buffer.position(startPosition);
             throw new DAOFileException(ex.getMessage(), ex);
         }
     }

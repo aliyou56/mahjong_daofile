@@ -45,13 +45,14 @@ public class Test {
     public static void main(String args[]) throws InterruptedException, DAOFileException, RulesException, MoveException, GameException {
         try {
             DAOManager daoManager = FileDAOManager.getInstance();
-            SapiGameDAO dao = daoManager.getSapiGameDao();
-            List<String> persistedNames = dao.loadPersistedNames();
-         
-               
 //            DAO<Game> gameDao = daoManager.getGameDao();
 //            DAO<TileZone> zoneDao = daoManager.getZoneDao();
-//            DAO<GameTileInterface> tileDao = daoManager.getTileDao();
+            DAO<GameTileInterface> tileDao = daoManager.getTileDao();
+//            SapiGameDAO dao = daoManager.getSapiGameDao();
+            
+            GameTileInterface tile7 = new GameTile(7, new SeasonTile(SeasonTile.Season.SPRING), new UUID(0, 7), true, Wind.NORTH);
+            tileDao.save(tile7);          
+               
 //            GameRuleFactory ruleFactory = new GameRuleFactory();
 //            GameRule rule = ruleFactory.create("INTERNATIONAL");
 //            MahjongBoard board = new MahjongBoard(Wind.WEST);
