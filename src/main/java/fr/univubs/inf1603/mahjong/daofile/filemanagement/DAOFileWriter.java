@@ -78,6 +78,10 @@ public class DAOFileWriter implements PropertyChangeListener {
     public DAOFileWriter(Path filePath) throws DAOFileWriterException {
         try {
             checkNotNull("filePath", filePath);
+            Path dir = filePath.getParent();
+            if(!dir.toFile().exists()) {
+                dir.toFile().mkdirs();
+            }
             this.filePath = filePath;
             if (!this.filePath.toFile().exists()) {
                 this.filePath.toFile().createNewFile();
@@ -85,7 +89,7 @@ public class DAOFileWriter implements PropertyChangeListener {
             this.multipleWritingList = new ArrayList<>();
             this.singleWritingList = new ArrayList<>();
         } catch (IOException ex) { // must never come because file is open with rw mode.
-            throw new DAOFileWriterException("IO error : " + ex.getMessage());
+            throw new DAOFileWriterException("IO error",ex);
         }
     }
 
@@ -249,10 +253,14 @@ public class DAOFileWriter implements PropertyChangeListener {
                 }
                 singleWritingList.clear();
             }
+            done();
         } catch (DAOFileWriterException | DAOFileException e) {
             e.printStackTrace(System.out);
         }
     };
+    
+    
+    protected void done() {}
 
     /**
      * Ajoute un tuple <code>row</code> à la liste de tuples dont le contenu est

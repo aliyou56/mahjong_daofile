@@ -65,7 +65,7 @@ public class FileHeaderRowTest extends AbstractRowTest {
     public void testHasChanged() throws DAOFileException {
         FileHeader data = new FileHeader(12, 15);
         FileHeaderRow instance = new FileHeaderRow(data);
-        super.testHasChanged(instance, false);
+        super.testIsDirty(instance, true);
         // TODO change pointer
     }
 
@@ -77,7 +77,7 @@ public class FileHeaderRowTest extends AbstractRowTest {
     public void testSetChanged() throws DAOFileException {
         FileHeader data = new FileHeader(12, 15);
         FileHeaderRow instance = new FileHeaderRow(data);
-        super.testSetChanged(instance);
+        super.testSetDirty(instance);
     }
 
     /**

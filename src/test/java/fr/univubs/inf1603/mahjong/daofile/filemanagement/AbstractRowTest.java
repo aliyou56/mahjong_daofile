@@ -97,8 +97,8 @@ public abstract class AbstractRowTest {
      * @param expResult
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
-    protected void testHasChanged(AbstractRow row, boolean expResult) throws DAOFileException {
-        System.out.println("hasChanged");
+    protected void testIsDirty(AbstractRow row, boolean expResult) throws DAOFileException {
+        System.out.println("isDirty");
 //        ByteBuffer buffer = ByteBuffer.allocate(row.getRowSize());
 //        row.writeData(buffer);
 //        
@@ -111,8 +111,8 @@ public abstract class AbstractRowTest {
      * Test of setDirty method, of class AbstractRow.
      * @param row
      */
-    protected void testSetChanged(AbstractRow row) {
-        System.out.println("setChanged");
+    protected void testSetDirty(AbstractRow row) {
+        System.out.println("setDirty");
         boolean expResult = false;
         row.setDirty(expResult);
         boolean result = row.isDirty();
@@ -193,7 +193,7 @@ public abstract class AbstractRowTest {
     protected void testGetPropertyChangeSupport(AbstractRow row) {
         System.out.println("getPropertyChangeSupport");
         PropertyChangeSupport result = row.getPropertyChangeSupport();
-        assertNotEquals(null, result);
+        assertNotNull(result);
     }
 
     /**
@@ -207,48 +207,4 @@ public abstract class AbstractRowTest {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-
-//    /**
-//     * Test of toString method, of class AbstractRow.
-//     */
-//    @Test
-//    public void testToString() {
-//        System.out.println("toString");
-//        AbstractRow instance = null;
-//        String expResult = "";
-//        String result = instance.toString();
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of hashCode method, of class AbstractRow.
-//     */
-//    @Test
-//    public void testHashCode() {
-//        System.out.println("hashCode");
-//        AbstractRow instance = null;
-//        int expResult = 0;
-//        int result = instance.hashCode();
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of equals method, of class AbstractRow.
-//     */
-//    @Test
-//    public void testEquals() {
-//        System.out.println("equals");
-//        Object obj = null;
-//        AbstractRow instance = null;
-//        boolean expResult = false;
-//        boolean result = instance.equals(obj);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-
 }

@@ -113,7 +113,7 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
         this.rootDirPath = rootDirPath;
         this.rowSize = rowSize;
         try {
-            this.dataWriter = new DAOFileWriter(rootDirPath.resolve(dataFilename));
+            this.dataWriter = initDAOWriter(dataFilename);
         } catch (DAOFileWriterException ex) {
             throw new DAOFileException(ex.getMessage(), ex);
         }
@@ -122,7 +122,32 @@ public abstract class FileDAOMahjong<T extends Persistable> extends DAOMahjong<T
         this.fhr = dataWriter.loadFileHeader();
 //        System.out.print(fhr.getData());
     }
+    
+    protected FileDAOMahjong(Path rootDirPath, String indexFilename, int rowSize, DAOFileWriter writer) throws DAOFileException {
+        checkNotNull("rootDir", rootDirPath);
+        checkNotNull("indexFilename", indexFilename);
+        if (rowSize < 0) {
+            throw new IllegalArgumentException(" rowSize '"+rowSize+"' must be greater than zero.");
+        }
+        if (!rootDirPath.toFile().exists()) {
+            rootDirPath.toFile().mkdirs();
+            LOGGER.log(Level.INFO, "rootDir created");
+        }
+        this.rootDirPath = rootDirPath;
+        this.rowSize = rowSize;
+        
+        this.dataWriter = writer; 
+            
+        this.indexManager = new IndexManager(rootDirPath.resolve(indexFilename), rowSize);
+        this.dataRowsSortedByPointer = new ArrayList<>();
+        this.fhr = dataWriter.loadFileHeader();
+//        System.out.print(fhr.getData());
+    }
 
+    protected DAOFileWriter initDAOWriter(String dataFilename) throws DAOFileWriterException {
+        return new DAOFileWriter(rootDirPath.resolve(dataFilename));
+    }
+    
     /**
      * Rétourne un tuple de données encapsulant l'objet <code>T</code>.
      *

@@ -64,10 +64,10 @@ public class IndexRowTest extends AbstractRowTest {
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
     @Test
-    public void testHasChanged() throws DAOFileException {
+    public void testIsDirty() throws DAOFileException {
         Index data = new Index(new UUID(0, 1), 45);
         IndexRow instance = new IndexRow(29, data, 100);
-        super.testHasChanged(instance, false);
+        super.testIsDirty(instance, true);
     }
 
     /**
@@ -75,10 +75,10 @@ public class IndexRowTest extends AbstractRowTest {
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
     @Test
-    public void testSetChanged() throws DAOFileException {
+    public void testSetDirty() throws DAOFileException {
         Index data = new Index(new UUID(0, 1), 45);
         IndexRow instance = new IndexRow(29, data, 100);
-        super.testSetChanged(instance);
+        super.testSetDirty(instance);
     }
 
     /**

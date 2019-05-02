@@ -4,6 +4,8 @@ import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import java.beans.PropertyChangeSupport;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Cette classe définit la notion de l'index. L'index est composé de
@@ -17,6 +19,10 @@ public class Index implements Persistable {
 
     public static final String DATA_POINTER_PROPERTY = "dirty";
     
+    /**
+     * Logging
+     */
+    public static final Logger LOGGER = Logger.getLogger(Index.class.getName());
     /**
      * Support d'écoute
      */
@@ -35,11 +41,11 @@ public class Index implements Persistable {
      * Constructeur avec l'identifiant de indexé et le pointeur de donné.
      *
      * @param dataID Identifiant de l'objet indexé
-     * @param pointer Pointeur de donné pointant sur l'objet indexé.
+     * @param dataPointer Pointeur de donné pointant sur l'objet indexé.
      */
-    public Index(UUID dataID, long pointer) {
+    public Index(UUID dataID, long dataPointer) {
         this.dataID = dataID;
-        this.dataPointer = pointer;
+        this.dataPointer = dataPointer;
         this.pcs = new PropertyChangeSupport(this);
     }
 
@@ -54,7 +60,7 @@ public class Index implements Persistable {
     }
 
     /**
-     * Rétourne le pointeur de donné d'un index.
+     * Retourne le pointeur de donné d'un index.
      *
      * @return Pointeur de données d'un index.
      */
@@ -63,15 +69,21 @@ public class Index implements Persistable {
     }
 
     /**
-     * Modifie le pointeur de donné d'un index.
+     * Modifie le pointeur de donné d'un index
      *
      * @param dataPointer Nouvelle valeur du pointeur de donnée.
      */
-    public void setDataPointer(long dataPointer) { 
-        if (this.dataPointer != dataPointer) {
-            long oldValue = this.dataPointer;
-            this.dataPointer = dataPointer;
-            this.pcs.firePropertyChange(DATA_POINTER_PROPERTY, oldValue, this.dataPointer);
+    public void setDataPointer(long dataPointer) {
+        if (dataPointer < 0) { 
+            String message = "dataPointer didn't changed"
+                    + "\n\t cause -> new dataPointer '" + dataPointer + "' is less than 0";
+            LOGGER.log(Level.WARNING, message);
+        } else {
+            if (this.dataPointer != dataPointer) {
+                long oldValue = this.dataPointer;
+                this.dataPointer = dataPointer;
+                this.pcs.firePropertyChange(DATA_POINTER_PROPERTY, oldValue, this.dataPointer);
+            }
         }
     }
 

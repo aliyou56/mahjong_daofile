@@ -74,6 +74,18 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
         return instance;
     }
     
+    private FileTileDAO(Path rootDirPath, DAOFileWriter writer) throws DAOFileException {
+        super(rootDirPath, "tile.index", TileRow.TILE_ROW_SIZE, writer);
+        tileToZoneLinkManager = new TileToZoneLinkManager(this);
+    }
+    
+    static FileTileDAO getInstance(Path rootDir, DAOFileWriter writer) throws DAOFileException {
+        if(instance == null) {
+            instance = new FileTileDAO(rootDir, writer);
+        }
+        return instance;
+    }
+    
     /**
      * @return Le gestionnaire de liens entre les tuiles et les zones.
      */

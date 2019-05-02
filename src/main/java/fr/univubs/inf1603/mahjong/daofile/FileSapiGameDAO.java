@@ -29,6 +29,8 @@ import java.util.logging.Logger;
  * @version 1.3.0
  */
 public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGameDAO, Serializable {
+    
+    private static final long serialVersionID = 1L;
 
     /**
      *  Contient l'Instance du DAO qui gère les objets {@code SapiGame}.

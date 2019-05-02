@@ -146,7 +146,6 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
 //    /**
 //     * Test of getDataRow method, of class FileDAOMahjong.
 //     */
-//    @Test
 //    public void testGetDataRow_3args() throws Exception {
 //        System.out.println("getDataRow");
 //        int rowID = 0;
@@ -163,7 +162,6 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
 //    /**
 //     * Test of getDataRow method, of class FileDAOMahjong.
 //     */
-//    @Test
 //    public void testGetDataRow_long() throws Exception {
 //        System.out.println("getDataRow");
 //        long rowPointer = 0L;
@@ -178,7 +176,6 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
 //    /**
 //     * Test of removeDataRow method, of class FileDAOMahjong.
 //     */
-//    @Test
 //    public void testRemoveDataRow() throws Exception {
 //        System.out.println("removeDataRow");
 //        UUID dataID = null;
@@ -193,7 +190,6 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
 //    /**
 //     * Test of delete method, of class FileDAOMahjong.
 //     */
-//    @Test
 //    public void testDelete() throws Exception {
 //        System.out.println("delete");
 //        FileDAOMahjong instance = null;
@@ -201,19 +197,15 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
 //    }
-//
-//    /**
-//     * Test of getRowNumber method, of class FileDAOMahjong.
-//     */
-//    @Test
-//    public void testGetRowNumber() {
-//        System.out.println("getRowNumber");
-//        FileDAOMahjong instance = null;
-//        int expResult = 0;
-//        int result = instance.getRowNumber();
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
 
+    /**
+     * Test of getRowNumber method, of class FileDAOMahjong.
+     * @param instance
+     * @param expResult
+     */
+    protected void testGetRowNumber(FileDAOMahjong<T> instance, int expResult) {
+        System.out.println("getRowNumber");
+        int result = instance.getRowNumber();
+        assertEquals(expResult, result);
+    }
 }

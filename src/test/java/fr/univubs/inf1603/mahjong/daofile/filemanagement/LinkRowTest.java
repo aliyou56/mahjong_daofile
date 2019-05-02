@@ -65,10 +65,10 @@ public class LinkRowTest extends AbstractRowTest {
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
     @Test
-    public void testHasChanged() throws DAOFileException {
+    public void testIsDirty() throws DAOFileException {
         Link data = new Link(new UUID(0, 1), new UUID(0, 2));
         LinkRow instance = new LinkRow(29, data, 100);
-        super.testHasChanged(instance, false);
+        super.testIsDirty(instance, true);
     }
 
     /**
@@ -76,10 +76,10 @@ public class LinkRowTest extends AbstractRowTest {
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      */
     @Test
-    public void testSetChanged() throws DAOFileException {
+    public void testSetDirty() throws DAOFileException {
         Link data = new Link(new UUID(0, 1), new UUID(0, 2));
         LinkRow instance = new LinkRow(29, data, 100);
-        super.testSetChanged(instance);
+        super.testSetDirty(instance);
     }
 
     /**
