@@ -39,9 +39,10 @@ import java.util.logging.Logger;
  *        ---------------------------------------------
  * </pre>
  *
+ * @see LinkRow
  * @see AbstractRowManager
- * @author aliyou, nesrine
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  * @param <T> Objet <code>T</code> enfant du lien.
  */
 public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkRow> {
@@ -242,7 +243,7 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
      * liens.
      */
     public void removeChildren(List<T> children) throws DAOFileException {
-        checkNotNull("children", children);
+        checkNotNull("LinkManager -> children", children);
         if (!children.isEmpty()) {
             List<LinkRow> multipleRemoveList = super.getRowList(children);
             List<LinkRow> singleRemoveList = super.getSingleRemoveList(multipleRemoveList);
@@ -262,7 +263,6 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
                 try {
                     if (rowWriter.deleteFromFile((int) startPointer, offset)) {
                         super.updateRowsPointer(startPointer, offset);
-                        dao.delete(children);
                         LOGGER.log(Level.INFO, " [OK] {0} Link successful deleted -> startPointer : {1} -- offset : {2}",
                                 new Object[]{multipleRemoveList.size(), startPointer, offset});
                         StringBuilder sb = new StringBuilder();
@@ -272,7 +272,9 @@ public class LinkManager<T extends Persistable> extends AbstractRowManager<LinkR
                         });
                         sb.append("\t} ");
                         LOGGER.log(Level.FINE, sb.toString());
-                    }
+                        
+                        dao.delete(children);
+                    } 
                 } catch (DAOFileWriterException ex) {
                     throw new DAOFileException(ex.getMessage(), ex);
                 }

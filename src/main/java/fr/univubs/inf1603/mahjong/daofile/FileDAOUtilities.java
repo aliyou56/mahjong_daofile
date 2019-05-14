@@ -1,24 +1,35 @@
 
 package fr.univubs.inf1603.mahjong.daofile;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+
 /**
  * Classe utilitaire pour le DAO Fichier.
  * 
  * @author aliyou
- * @version 1.2.5
+ * @version 1.3
  */
 public class FileDAOUtilities {
     
     /**
-     * Vérifie si un objet est null ou pas. Lève une exception de type
-     * <code>IllegalArgumentException</code> si l'ojet est <code>null</code>.
-     *
+     * Logging
+     */
+    private static final Logger LOGGER = Logger.getLogger(FileDAOUtilities.class.getName());
+    
+    /**
+     * Vérifie si un objet est null ou pas. Lance une exception de type
+     * {@code IllegalArgumentException} si l'ojet est <code>null</code>.
+     * 
      * @param name Nom de l'objet à tester.
      * @param obj Objet à tester.
      */
     public static void checkNotNull(String name, Object obj) {
         if (obj == null) {
-            throw new IllegalArgumentException(name + " == null");
+            String msg = name + " == null";
+            LOGGER.log(Level.SEVERE, msg);
+            throw new IllegalArgumentException(msg);
         }
     }
     
@@ -32,8 +43,8 @@ public class FileDAOUtilities {
      * prévue sinon une nouvelle chaine de caractère obtenue en tronquant la chaine {@code str}
      * à la position {@code lenght}. 
      */
-    public static String checkStringLenght(String name, int lenght) {
-        checkNotNull("name", name);
+    public static String checkNameLenght(String name, int lenght) {
+        checkNotNull("FileDAOUtilities.checkNameLenght -> name", name);
         if (name.length() > lenght) {
             name = name.substring(0, lenght);
         }

@@ -13,11 +13,12 @@ import java.util.logging.Logger;
  * dans le fichier. Il est utilisé pour accelerer l'accès aux données
  * persistées.
  * 
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  */
 public class Index implements Persistable {
 
-    public static final String DATA_POINTER_PROPERTY = "dirty";
+    public static final String DATA_POINTER_PROPERTY = "dataPointer";
     
     /**
      * Logging

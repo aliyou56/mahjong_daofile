@@ -10,7 +10,7 @@ import java.util.logging.Logger;
  * Cette classe répresente un conteneur qui encapsule une en-tete de fichier.
  *
  * @author aliyou
- * @version 1.2.5
+ * @version 1.3
  */
 public class FileHeaderRow extends AbstractRow<FileHeader> {
 

@@ -10,6 +10,13 @@ import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.engine.game.GameTileInterface;
 import fr.univubs.inf1603.mahjong.dao.SapiGameDAO;
 import fr.univubs.inf1603.mahjong.engine.game.Game;
+import java.io.IOException;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
  * La classe <code>FileDAOManager</code> est une implémentation du
@@ -18,8 +25,8 @@ import fr.univubs.inf1603.mahjong.engine.game.Game;
  * statique <code>getInstance()</code> sans paramètre ou avec le chemin du
  * répertoire racine <code>Path</code> comme paramètre.
  *
- * @author aliyou, nesrine
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  */
 public class FileDAOManager implements DAOManager {
 
@@ -40,10 +47,28 @@ public class FileDAOManager implements DAOManager {
      */
     private FileDAOManager(Path rootDir) {
         this.rootDir = rootDir;
+        setupLogger(rootDir);
+    }
+
+    private static void setupLogger(Path rootDir) {
+        try {
+            Logger rootLogger = Logger.getLogger("fr.univubs.inf1603.mahjong.daofile"); //fr.univubs.inf1603.mahjong.daofile
+            for (Handler handler : rootLogger.getHandlers()) {
+                rootLogger.removeHandler(handler);
+            }
+            FileHandler fileHandler = new FileHandler(rootDir.resolve("daofile.log").toString());
+            fileHandler.setFormatter(new SimpleFormatter());
+//        ConsoleHandler consoleHandler = new ConsoleHandler();
+            rootLogger.addHandler(fileHandler);
+//        rootLogger.addHandler(consoleHandler);
+            rootLogger.setLevel(Level.INFO);
+        } catch (IOException | SecurityException ex) {
+            ex.printStackTrace(System.err);
+        }
     }
 
     /**
-     * Rétourne l'instance du gestionnaire des DAO.
+     * Renvoie l'instance du gestionnaire des DAO.
      * <br>
      * Si c'est le premier accès au {@code FileDAOManager} via cette méthode
      * statique {@code getInstance()} les fichiers sont enregistré dans un
@@ -53,12 +78,12 @@ public class FileDAOManager implements DAOManager {
      *
      * @return L'instance du <code>DAOManager</code>.
      */
-    synchronized public static DAOManager getInstance() {
-        return getInstance(Paths.get(System.getProperty("user.home"), "MahJong"));
+    public static DAOManager getInstance() {
+        return getInstance(Paths.get(System.getProperty("user.home"), "MahjongDAO"));
     }
 
     /**
-     * Rétourne l'instance du gestionnaire des DAO.
+     * Renvoie l'instance du gestionnaire des DAO.
      * <br>
      * Si c'est le premier accès au {@code FileDAOManager} via cette méthode
      * statique {@code getInstance(Path rootDir)} les fichiers sont enregistré
@@ -76,7 +101,7 @@ public class FileDAOManager implements DAOManager {
     }
 
     /**
-     * Rétourne l'instance du DAO fichier qui gère les simple games
+     * Renvoie l'instance du DAO fichier qui gère les simple games
      * <code>SimpleGame</code>.
      *
      * @return l'instance du DAO fichier qui gère les joueurs
@@ -85,7 +110,7 @@ public class FileDAOManager implements DAOManager {
      * {<code>FileSimpleGameDAO</code>.
      */
     @Override
-    synchronized public SapiGameDAO getSapiGameDao() throws DAOException {
+    public SapiGameDAO getSapiGameDao() throws DAOException {
         try {
             return FileSapiGameDAO.getInstance(rootDir);
         } catch (DAOFileException ex) {
@@ -94,15 +119,14 @@ public class FileDAOManager implements DAOManager {
     }
 
     /**
-     * Rétourne l'instance du DAO fichier qui gère les parties
-     * <code>Game</code>.
+     * Renvoie l'instance du DAO fichier qui gère les parties <code>Game</code>.
      *
      * @return l'instance du DAO fichier qui gère les parties <code>Game</code>.
      * @throws DAOException s'il y'a une erreur lors de l'instanciation de
      * <code>FileGameDAO</code>.
      */
     @Override
-    synchronized public DAO<Game> getGameDao() throws DAOException {
+    public DAO<Game> getGameDao() throws DAOException {
         try {
             return FileGameDAO.getInstance(rootDir);
         } catch (DAOFileException ex) {
@@ -111,26 +135,23 @@ public class FileDAOManager implements DAOManager {
     }
 
     /**
-     * Rétourne l'instance du DAO qui gère les zones <code>TileZone</code>.
+     * Renvoie l'instance du DAO qui gère les zones <code>TileZone</code>.
      *
      * @return l'instance du DAO qui gère les zonees <code>TileZone</code>.
      * @throws DAOException s'il y'a une erreur lors de l'instanciation de
      * <code>FileZoneDAO</code>
      */
     @Override
-    synchronized public DAO<TileZone> getZoneDao() throws DAOException {
+    public DAO<TileZone> getZoneDao() throws DAOException {
         try {
             return FileZoneDAO.getInstance(rootDir);
-//                zoneDao = new FileZoneDAO(rootDir);
-//                zoneDao.setZoneLinkManager(linkManagerFactory.getZoneToGameLinkManager());
-//                zoneDao.setTileLinkManager(linkManagerFactory.getTileToZoneLinkManager());
         } catch (DAOFileException ex) {
             throw new DAOException(ex.getMessage(), ex);
         }
     }
 
     /**
-     * Rétourne l'instance du DAO fichier qui gère les tuiles
+     * Renvoie l'instance du DAO fichier qui gère les tuiles
      * <code>GameTile</code>.
      *
      * @return l'instance du DAO fichier qui gère les tuiles
@@ -139,7 +160,7 @@ public class FileDAOManager implements DAOManager {
      * <code>FileTileDAO</code>
      */
     @Override
-    synchronized public DAO<GameTileInterface> getTileDao() throws DAOException {
+    public DAO<GameTileInterface> getTileDao() throws DAOException {
         try {
             return FileTileDAO.getInstance(rootDir);
         } catch (DAOFileException ex) {

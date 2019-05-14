@@ -20,32 +20,39 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * La classe {@code FileTileDAO} gère la persistance des zones {@code TileZone}
+ * La classe {@code FileZoneDAO} gère la persistance des zones {@code TileZone}
  * {@link FileZoneDAO.ZoneRow}.
  *
- * @author aliyou, nesrine
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  */
 public class FileZoneDAO extends FileDAOMahjong<TileZone> {
 
-    /**
-     *  Contient l'Instance du DAO qui gère les zones.
-     */
-    private static FileZoneDAO instance;
+    public static final String ZONE_WRITED_PROPERTY = "zoneWrited";
     
     /**
      * Logging
      */
     private static final Logger LOGGER = Logger.getLogger(FileZoneDAO.class.getName());
+    
+    /**
+     *  Contient l'Instance du DAO qui gère les zones.
+     */
+    private static FileZoneDAO instance;
+
+    /**
+     * DAO qui gère les tuiles
+     */
+    final private FileTileDAO tileDAO;  
     /**
      * Gestionnaire de liens entre les tuiles et les zones.
      */
-    private final LinkManager<GameTileInterface> tileToZoneLinkManager;
+    /*final*/ static private LinkManager<GameTileInterface> tileToZoneLinkManager;
     /**
      * Gestionnaire de liens entre les zones et les parties de Mahjong.
      */
-    private final LinkManager<TileZone> zoneToGameLinkManager;
-
+    final private LinkManager<TileZone> zoneToGameLinkManager;
+    
     /**
      * Constructeur privé avec un Chemin d'accès du répertoire racine
      * <code>rootDirPath</code>.
@@ -55,9 +62,20 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
      * @throws DAOFileException s'il ya une erreur lors de l'instanciation.
      */
     private FileZoneDAO(Path rootDirPath) throws DAOFileException {
-        super(rootDirPath, "zone.data", "zone.index", ZoneRow.ZONE_ROW_SIZE);
-        zoneToGameLinkManager = new ZoneToGameLinkManager(this);
-        tileToZoneLinkManager = FileTileDAO.getInstance(rootDirPath).getLinkManager();
+        super(rootDirPath, "zone", ZoneRow.ZONE_ROW_SIZE);
+        this.zoneToGameLinkManager = new ZoneToGameLinkManager(this);
+        this.tileDAO = FileTileDAO.getInstance(rootDirPath);
+        this.tileDAO.addPropertyChangeListener(this);
+        FileZoneDAO.tileToZoneLinkManager = this.tileDAO.getLinkManager();
+    }
+    
+    @Override
+    synchronized public void propertyChange(PropertyChangeEvent evt) {
+        if(evt.getPropertyName().equals(FileTileDAO.TILE_WRITED_PROPERTY)) {
+            System.out.println("* FileZoneGame -> job done notification received from FileTileDAO");
+            notify();
+            super.getPropertyChangeSupport().firePropertyChange(ZONE_WRITED_PROPERTY, false, true);
+        }
     }
     
     /**
@@ -74,7 +92,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
         }
         return instance;
     }
-
+    
     /**
      * @return Le gestionnaire de liens entre les zones et les parties de Mahjong.
      */
@@ -86,7 +104,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
      * {@inheritDoc}
      */
     @Override
-    protected DataRow getDataRow(int rowID, TileZone tileZone, long rowPointer) throws DAOFileException {
+    protected DataRow getDataRow(int rowID, TileZone tileZone, long rowPointer) {
         return new ZoneRow(rowID, tileZone, rowPointer);
     }
 
@@ -108,7 +126,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
     protected void deleteFromPersistence(TileZone tileZone) throws DAOException {
         try {
             if (zoneToGameLinkManager.getRow(tileZone.getUUID()) == null) {
-                    // suppression des tuiles qui sont dans la zone
+                // suppression des tuiles qui sont dans la zone
                 tileToZoneLinkManager.removeChildren(tileZone.getTiles());
                 if (super.removeDataRow(tileZone.getUUID())) {
                     LOGGER.log(Level.INFO, "{0} id={1} deleted from persistance",
@@ -130,6 +148,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
      */
     @Override
     public void delete(List<TileZone> zones) throws DAOFileException {
+        LOGGER.log(Level.INFO, "** delete zoneList -> zones.size {0}", zones.size());
         try {
             for (TileZone tz : zones) {
                 deleteFromPersistence(tz);
@@ -171,7 +190,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
      * </pre>
      *
      */
-    class ZoneRow extends DataRow<TileZone> {
+    static class ZoneRow extends DataRow<TileZone> {
 
         /**
          * Taille d'une zone en octet.
@@ -191,7 +210,7 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
          * @param data Zone encapsulé dans le tuple.
          * @param rowPointer Pointeur de tuple.
          */
-        ZoneRow(int rowID, TileZone data, long rowPointer) throws DAOFileException {
+        ZoneRow(int rowID, TileZone data, long rowPointer) {
             super(rowID, data, ZONE_SIZE, rowPointer);
         }
 
@@ -280,7 +299,6 @@ public class FileZoneDAO extends FileDAOMahjong<TileZone> {
                     if (nbTiles != 0) {
                         tileToZoneLinkManager.addLink(getData().getUUID(), getData().getTiles());
                     }
-                    indexManager.addIndex(getIndex());
                     setWritedInFile(true);
                 } else { // mis à jour
                     tileToZoneLinkManager.updateLink(getData().getUUID(), getData().getTiles());

@@ -13,7 +13,7 @@ import java.util.UUID;
  * Cette classe répresente un tuple qui encapsule un lien.
  *
  * @author aliyou
- * @version 1.2.5
+ * @version 1.3
  */
 public class LinkRow extends AbstractRow<Link> {
 
@@ -37,7 +37,7 @@ public class LinkRow extends AbstractRow<Link> {
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      * s'il y'a une erreur lors de l'instanciation.
      */
-    public LinkRow(int rowID, Link data, long rowPointer) throws DAOFileException {
+    LinkRow(int rowID, Link data, long rowPointer) throws DAOFileException {
         super(rowID, data, LINK_SIZE, rowPointer);
     }
 
@@ -52,7 +52,7 @@ public class LinkRow extends AbstractRow<Link> {
      * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un
      * lien.
      */
-    public LinkRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
+    LinkRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
         super(writer, LINK_SIZE, rowPointer);
     }
 
@@ -65,7 +65,7 @@ public class LinkRow extends AbstractRow<Link> {
      * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un lien
      * <code>LinkRow.Link</code>.
      */
-    public LinkRow(ByteBuffer buffer, long rowPointer) throws DAOFileException {
+    LinkRow(ByteBuffer buffer, long rowPointer) throws DAOFileException {
         super(buffer, LINK_SIZE, rowPointer);
     }
 
@@ -119,7 +119,7 @@ public class LinkRow extends AbstractRow<Link> {
     /**
      * Cette classe répresente un lien entre un objet parent et un objet enfant.
      */
-    static class Link implements Persistable {
+    static public class Link implements Persistable {
 
         /**
          * Support d'écoute
@@ -149,7 +149,7 @@ public class LinkRow extends AbstractRow<Link> {
         }
 
         /**
-         * Rétourne L'identifiant d'un objet enfant qui répresente l'identifiant
+         * Renvoie L'identifiant d'un objet enfant qui répresente l'identifiant
          * d'un lien.
          *
          * @return Identifiant d'un lien
@@ -160,7 +160,7 @@ public class LinkRow extends AbstractRow<Link> {
         }
 
         /**
-         * Rétourne l'identifiant d'un objet parent
+         * Renvoie l'identifiant d'un objet parent
          *
          * @return Identifiant d'un objet parent
          */
@@ -190,7 +190,7 @@ public class LinkRow extends AbstractRow<Link> {
         }
 
         /**
-         * Rétourne une description textuelle d'un lien
+         * Renvoie une description textuelle d'un lien
          *
          * @return Description textuelle d'un lien.
          */
@@ -222,10 +222,7 @@ public class LinkRow extends AbstractRow<Link> {
             if (!Objects.equals(this.childID, other.childID)) {
                 return false;
             }
-            if (!Objects.equals(this.parentID, other.parentID)) {
-                return false;
-            }
-            return true;
+            return Objects.equals(this.parentID, other.parentID);
         }
 
     }

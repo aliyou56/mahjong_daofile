@@ -5,18 +5,14 @@ import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 
 /**
  * Cette classe répresente un tuple de données. Un tuple de données est un tuple
- * qui a un index.
+ * qui encapsuler un objet à persister. ex : tuple de tuile
+ * {@code FileTileDAO.TileRow}
  *
  * @author aliyou
- * @version 1.2.5
+ * @version 1.3
  * @param <T> Obet à persister.
  */
 public abstract class DataRow<T extends Persistable> extends AbstractRow<T> {
-
-    /**
-     * Index d'un tuple.
-     */
-    private final Index index;
 
     /**
      * Indique si le tuple a déjà été écrit dans un fichier de données.
@@ -26,11 +22,9 @@ public abstract class DataRow<T extends Persistable> extends AbstractRow<T> {
     /**
      * {@inheritDoc}
      */
-    protected DataRow(int rowID, T data, int dataSize, long rowPointer) throws DAOFileException {
+    protected DataRow(int rowID, T data, int dataSize, long rowPointer) {
         super(rowID, data, dataSize, rowPointer);
-        this.index = new Index(data.getUUID(), rowPointer);
         this.writedInFile = false;
-//        System.err.println("constructor index : " +index);
     }
 
     /**
@@ -38,15 +32,7 @@ public abstract class DataRow<T extends Persistable> extends AbstractRow<T> {
      */
     protected DataRow(DAOFileWriter writer, int dataSize, long rowPointer) throws DAOFileException {
         super(writer, dataSize, rowPointer);
-        this.index = new Index(getData().getUUID(), rowPointer);
         this.writedInFile = true;
-    }
-
-    /**
-     * @return L'index d'un tuple de donnée.
-     */
-    protected Index getIndex() {
-        return index;
     }
 
     /**
@@ -62,5 +48,4 @@ public abstract class DataRow<T extends Persistable> extends AbstractRow<T> {
     protected void setWritedInFile(boolean writedInFile) {
         this.writedInFile = writedInFile;
     }
-
 }

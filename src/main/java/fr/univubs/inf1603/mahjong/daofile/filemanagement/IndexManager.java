@@ -31,8 +31,8 @@ import java.util.logging.Logger;
  * </pre>
  *
  * @see AbstractRowManager
- * @author aliyou, nesrine
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  */
 public class IndexManager extends AbstractRowManager<IndexRow> {
 
@@ -84,7 +84,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
     public void addIndex(Index index) throws DAOFileException {
         IndexRow newIndexRow = new IndexRow(getNextRowID(), index, super.getNextRowPointer());
         if(!super.addRow(newIndexRow)) {
-            LOGGER.log(Level.SEVERE, "index not added : {0}", index);
+            LOGGER.log(Level.WARNING, "index not added : {0} \n\t cause -> It exists already", index);
         }
     }
 
@@ -116,11 +116,11 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
      */
     public Index removeIndex(IndexRow indexRowToDelete) throws DAOFileException {
         if (indexRowToDelete != null) {
-            long pointer = indexRowToDelete.getRowPointer();
-            long dataPointer = indexRowToDelete.getData().getDataPointer();
-            if (super.removeRow(indexRowToDelete)) { // pointer = -1 after delete
-                updateDataRowsPointer(pointer, dataPointer, dataRowSize);
-                LOGGER.log(Level.FINE, "[OK] index deleted -> dataID = {0}, rowSize = {1}, rowNumber = {2}",
+            if (super.removeRow(indexRowToDelete)) {
+                long rowPpointer = indexRowToDelete.getRowPointer();
+                long dataPointer = indexRowToDelete.getData().getDataPointer();
+                updateDataRowsPointer(rowPpointer, dataPointer, dataRowSize);
+                LOGGER.log(Level.FINE, "[OK] index deleted -> dataID = {0}, rowSize = {1}, rowNumber = {2}\n",
                         new Object[]{indexRowToDelete.getData().getUUID(), rowSize, getRowNumber()});
                 return indexRowToDelete.getData();
             }
@@ -147,7 +147,7 @@ public class IndexManager extends AbstractRowManager<IndexRow> {
             updateDataRowsPointer(startPointer, dataPointer, indexRowsSortedByPointerToDelete.size() * this.dataRowSize);
             int offset = indexRowsSortedByPointerToDelete.size() * super.rowSize;
             try {
-                if (rowWriter.deleteFromFile((int) startPointer, offset)) {
+                if (super.rowWriter.deleteFromFile((int) startPointer, offset)) {
                     super.updateRowsPointer(startPointer, offset);
                 }
             } catch (DAOFileWriterException ex) {

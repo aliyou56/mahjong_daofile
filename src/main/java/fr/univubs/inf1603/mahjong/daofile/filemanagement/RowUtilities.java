@@ -1,6 +1,6 @@
 package fr.univubs.inf1603.mahjong.daofile.filemanagement;
 
-import fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities;
+import static fr.univubs.inf1603.mahjong.daofile.FileDAOUtilities.checkNotNull;
 import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
 import fr.univubs.inf1603.mahjong.engine.persistence.UniqueIdentifiable;
 import java.util.List;
@@ -12,8 +12,8 @@ import java.util.logging.Logger;
  * La classe {@code RowUtilities} est une classe utilitaire pour les tuples.
  * Elle regroupe les algorithmes communs aux tuples.
  *
- * @author aliyou, nesrine
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  */
 public class RowUtilities {
 
@@ -35,10 +35,10 @@ public class RowUtilities {
      * @param rowPointer Pointeur de tuple de reference.
      * @param offset Offset à enlever aux pointeurs de tuple.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
-     * les parametres fournis ne sont pas acceptés.
+     * les arguments fournis ne sont pas acceptés.
      */
     public static void updateRowsPointer(List<? extends AbstractRow> sortedListByPointer, long rowPointer, int offset) throws DAOFileException {
-        FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
+        checkNotNull("RowUtilities.updateRowsPointer -> sortedListByPointer", sortedListByPointer);
         int position = getRowPositionFormSortedListByPointer(sortedListByPointer, rowPointer);
         LOGGER.log(Level.FINE, "** RowUtilities.updateRowsPointer : "
                 + "\n\t pointer  : {0}"
@@ -97,10 +97,10 @@ public class RowUtilities {
      * @return Le tuple ayant comme pointeur {@code rowPointer} s'il existe dans
      * la liste sinon {@code null}.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
-     * les parametres fournis ne sont pas acceptés.
+     * les arguments fournis ne sont pas acceptés.
      */
     public static AbstractRow getRowFromSortedListByPointer(List<? extends AbstractRow> sortedListByPointer, long rowPointer) throws DAOFileException {
-        FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
+        checkNotNull("RowUtilities.getRowFromSortedListByPointer -> sortedListByPointer", sortedListByPointer);
         if (!sortedListByPointer.isEmpty()) {
             int pos = getRowPositionFormSortedListByPointer(sortedListByPointer, rowPointer);
             AbstractRow row = sortedListByPointer.get(pos);
@@ -120,23 +120,25 @@ public class RowUtilities {
      * tuple. NE DOIT PAS ETRE NULLE.
      * @param newRow Nouveau tuple à rajouter. NE DOIT PAS ETRE NULL.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
-     * les parametres fournis ne sont pas acceptés.
+     * les arguments fournis ne sont pas acceptés.
      */
     public static void addRowToSortedListByPointer(List<AbstractRow> sortedListByPointer, AbstractRow newRow) throws DAOFileException {
-        FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
-        FileDAOUtilities.checkNotNull("newRow", newRow);
+        checkNotNull("RowUtilities.addRowToSortedListByPointer -> sortedListByPointer", sortedListByPointer);
+        checkNotNull("RowUtilities.addRowToSortedListByPointer -> newRow", newRow);
         if (sortedListByPointer.isEmpty()) {
             sortedListByPointer.add(newRow);
         } else {
-            int pos = getRowPositionFormSortedListByPointer(sortedListByPointer, newRow.getRowPointer());
-            if (sortedListByPointer.get(pos).getRowPointer() < newRow.getRowPointer()) {
-                if (pos == sortedListByPointer.size() - 1) { // si c'est le dernier element
-                    sortedListByPointer.add(newRow);
+            if (!sortedListByPointer.contains(newRow)) { // si le tuple n'existe pas déjà dans la liste
+                int pos = getRowPositionFormSortedListByPointer(sortedListByPointer, newRow.getRowPointer());
+                if (sortedListByPointer.get(pos).getRowPointer() < newRow.getRowPointer()) {
+                    if (pos == sortedListByPointer.size() - 1) { // si c'est le dernier element
+                        sortedListByPointer.add(newRow);
+                    } else {
+                        sortedListByPointer.add(pos + 1, newRow);
+                    }
                 } else {
-                    sortedListByPointer.add(pos + 1, newRow);
+                    sortedListByPointer.add(pos, newRow);
                 }
-            } else {
-                sortedListByPointer.add(pos, newRow);
             }
         }
     }
@@ -151,27 +153,29 @@ public class RowUtilities {
      * objets encapsulés dans les tuples. NE DOIT PAS ETRE NULLE.
      * @param newRow Nouveau tuple à rajouter. NE DOIT PAS ETRE NULL.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
-     * les parametres fournis ne sont pas acceptés.
+     * les arguments fournis ne sont pas acceptés.
      */
     public static void addRowToSortedListByUUID(List<AbstractRow> sortedListByUUID, AbstractRow newRow) throws DAOFileException {
-        FileDAOUtilities.checkNotNull("sortedListByUUID", sortedListByUUID);
-        FileDAOUtilities.checkNotNull("newRow", newRow);
+        checkNotNull("RowUtilities.addRowToSortedListByUUID -> sortedListByUUID", sortedListByUUID);
+        checkNotNull("RowUtilities.addRowToSortedListByUUID -> newRow", newRow);
         if (sortedListByUUID.isEmpty()) {
             sortedListByUUID.add(newRow);
         } else {
-            UniqueIdentifiable newData = (UniqueIdentifiable) newRow.getData();
-            UUID newDataID = newData.getUUID();
-            int pos = getRowPositionFromSortedListByUUID(sortedListByUUID, newDataID);
-            UniqueIdentifiable dataAtPos = (UniqueIdentifiable) sortedListByUUID.get(pos).getData();
-            int compare = dataAtPos.getUUID().compareTo(newDataID);
-            if (compare == -1) { // uuid plus grand
-                if (pos == sortedListByUUID.size() - 1) { // si c'est le dernier element
-                    sortedListByUUID.add(newRow);
-                } else {
-                    sortedListByUUID.add(pos + 1, newRow);
+            if (!sortedListByUUID.contains(newRow)) { // si le tuple n'existe pas déjà dans la liste
+                UniqueIdentifiable newData = (UniqueIdentifiable) newRow.getData();
+                UUID newDataID = newData.getUUID();
+                int pos = getRowPositionFromSortedListByUUID(sortedListByUUID, newDataID);
+                UniqueIdentifiable dataAtPos = (UniqueIdentifiable) sortedListByUUID.get(pos).getData();
+                int compare = dataAtPos.getUUID().compareTo(newDataID);
+                if (compare == -1) { // uuid plus grand
+                    if (pos == sortedListByUUID.size() - 1) { // si c'est le dernier element
+                        sortedListByUUID.add(newRow);
+                    } else {
+                        sortedListByUUID.add(pos + 1, newRow);
+                    }
+                } else { // uuid plus petit
+                    sortedListByUUID.add(pos, newRow);
                 }
-            } else { // uuid plus petit
-                sortedListByUUID.add(pos, newRow);
             }
         }
     }
@@ -189,10 +193,10 @@ public class RowUtilities {
      * @param rowPointer Pointeur du tuple dont la position est recherchée.
      * @return Position d'un tuple dans une liste de tuples.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
-     * les parametres fournis ne sont pas acceptés.
+     * les arguments fournis ne sont pas acceptés.
      */
     public static int getRowPositionFormSortedListByPointer(List<? extends AbstractRow> sortedListByPointer, long rowPointer) throws DAOFileException {
-        FileDAOUtilities.checkNotNull("sortedListByPointer", sortedListByPointer);
+        checkNotNull("RowUtilities.getRowPositionFormSortedListByPointer -> sortedListByPointer", sortedListByPointer);
         int a = 0;
         int b = sortedListByPointer.size() - 1;
         int mid = (a + b) / 2;
@@ -224,11 +228,11 @@ public class RowUtilities {
      * ETRE NULL.
      * @return Position d'un tuple dans une liste de tuples.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException si
-     * les parametres fournis ne sont pas acceptés.
+     * les arguments fournis ne sont pas acceptés.
      */
     public static int getRowPositionFromSortedListByUUID(List<? extends AbstractRow> sortedListByUUID, UUID dataID) throws DAOFileException {
-        FileDAOUtilities.checkNotNull("sortedListByUUID", sortedListByUUID);
-        FileDAOUtilities.checkNotNull("dataID", dataID);
+        checkNotNull("RowUtilities.getRowPositionFromSortedListByUUID -> sortedListByUUID", sortedListByUUID);
+        checkNotNull("RowUtilities.getRowPositionFromSortedListByUUID -> dataID", dataID);
         int a = 0;
         int b = sortedListByUUID.size() - 1;
         int mid = (a + b) / 2;

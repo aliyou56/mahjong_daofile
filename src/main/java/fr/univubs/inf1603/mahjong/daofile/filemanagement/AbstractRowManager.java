@@ -25,8 +25,8 @@ import java.util.logging.Logger;
  * dichotomique (O(log(n))). Après la suppression d'un tuple, le pointeur des
  * tuples qui suivent est mis à jour.
  *
- * @author aliyou, nesrine
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  * @param <T> Tuple
  */
 public abstract class AbstractRowManager<T extends AbstractRow> {
@@ -37,26 +37,26 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     private final static Logger LOGGER = Logger.getLogger(AbstractRowManager.class.getName());
 
     /**
-     * Tuple encapsulant l'en-tete d'un fichier.
-     */
-    private final FileHeaderRow fhr;
-    /**
      * Taille d'un tuple <code>T</code>.
      */
-    protected final int rowSize;
+    final protected int rowSize;
+    /**
+     * Tuple encapsulant l'en-tete d'un fichier.
+     */
+    final private FileHeaderRow fhr;
     /**
      * Liste des tuples <code>T</code> triée suivant le pointeur de tuple.
      */
-    protected final List<T> rowsSortedByPointer;
+    final protected List<T> rowsSortedByPointer;
     /**
      * Liste des tuples <code>T</code> triée suivant l'identifiant de l'objet
      * <code>T</code> encapsulé.
      */
-    private final List<T> rowsSortedByUUID;
+    final private List<T> rowsSortedByUUID;
     /**
      * Processus qui écrit dans le fichier.
      */
-    protected final DAOFileWriter rowWriter;
+    final protected DAOFileWriter rowWriter;
 
     /**
      * Constructeur avec le chemin d'accès d'un fichier <code>rowFilePath</code>
@@ -67,20 +67,24 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
      */
     protected AbstractRowManager(Path rowFilePath, int rowSize) throws DAOFileException {
+        FileDAOUtilities.checkNotNull("AbstractRowManager -> rowFilePath", rowFilePath);
+        if (rowSize <= 0) {
+            throw new IllegalArgumentException("AbstractRowManager -> rowSize '" + rowSize + "' must be greater than 0.");
+        }
+        this.rowSize = rowSize;
+        this.rowsSortedByPointer = new ArrayList<>();
+        this.rowsSortedByUUID = new ArrayList<>();
         try {
             this.rowWriter = new DAOFileWriter(rowFilePath);
         } catch (DAOFileWriterException ex) {
             throw new DAOFileException(ex.getMessage(), ex);
         }
-        this.rowSize = rowSize;
         this.fhr = rowWriter.loadFileHeader();
-        this.rowsSortedByPointer = new ArrayList<>();
-        this.rowsSortedByUUID = new ArrayList<>();
         int nbRows = loadAllRow();
-        if(nbRows != this.fhr.getData().getRowNumber()) {
+        if (nbRows != this.fhr.getData().getRowNumber()) {
             this.fhr.getData().setRowNumber(nbRows);
+            LOGGER.log(Level.INFO, "rowNumber updated -> newRowNumber = {0}\n", nbRows);
         }
-//        System.out.print(fhr.getData());
     }
 
     /**
@@ -94,16 +98,17 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      * s'il y'a une erreur lors de l'ajout d'un tuple à la liste.
      */
     public List<T> getRowList(List<? extends Persistable> dataList) throws DAOFileException {
-        FileDAOUtilities.checkNotNull("dataListToDelete", dataList);
+        FileDAOUtilities.checkNotNull("AbstractRowManager.getRowList -> dataListToDelete", dataList);
+        List<T> rowList = new ArrayList<>();
         if (!dataList.isEmpty()) {
-            List<T> rowList = new ArrayList<>();
             for (Persistable data : dataList) {
                 AbstractRow row = getRow(data.getUUID());
-                RowUtilities.addRowToSortedListByPointer((List<AbstractRow>) rowList, row);
+                if (row != null) {
+                    RowUtilities.addRowToSortedListByPointer((List<AbstractRow>) rowList, row);
+                }
             }
-            return rowList;
         }
-        return null;
+        return rowList;
     }
 
     /**
@@ -116,17 +121,19 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      */
     public List<T> getSingleRemoveList(List<T> rowsSorteByPointer) {
         List<T> singleRemoveList = new ArrayList<>();
-        AbstractRow firstRow = rowsSorteByPointer.get(0);
-        long offset = firstRow.getRowPointer() + firstRow.getRowSize();
-        for (T row : rowsSorteByPointer) {
-            if (offset - row.getRowPointer() != firstRow.getRowSize()) {
-                singleRemoveList.add(row);
+        if (!rowsSorteByPointer.isEmpty()) {
+            AbstractRow firstRow = rowsSorteByPointer.get(0);
+            long offset = firstRow.getRowPointer() + firstRow.getRowSize();
+            for (T row : rowsSorteByPointer) {
+                if (offset - row.getRowPointer() != firstRow.getRowSize()) {
+                    singleRemoveList.add(row);
+                }
+                offset += firstRow.getRowSize();
             }
-            offset += firstRow.getRowSize();
+            singleRemoveList.forEach(r -> {
+                rowsSorteByPointer.remove(r);
+            });
         }
-        singleRemoveList.forEach(r -> {
-            rowsSorteByPointer.remove(r);
-        });
         return singleRemoveList;
     }
 
@@ -233,19 +240,23 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      */
     protected boolean removeRow(T row) throws DAOFileException {
         if (row != null) {
-            int pointer = (int) row.getRowPointer();
-            T realRow = createRow(row.getRowPointer());
-            LOGGER.log(Level.FINE, "row to delete : {0}", row);
-            LOGGER.log(Level.FINE, "real row at the position in the file : {0}", realRow.getData());
-            if (((UniqueIdentifiable) realRow.getData()).getUUID().compareTo(((UniqueIdentifiable) row.getData()).getUUID()) == 0) {
-                removeRowFromList(row);
-                updateRowsPointer(pointer, rowSize);
-                LOGGER.log(Level.FINE, "[OK] row removed : {0}", row);
-                try {
-                    return rowWriter.deleteFromFile(pointer, rowSize);
-                } catch (DAOFileWriterException ex) {
-                    throw new DAOFileException(ex.getMessage(), ex);
+            removeRowFromList(row);
+            if (rowWriter.getFileLenght() > row.getRowPointer()) {
+                T realRow = createRow(row.getRowPointer());
+                LOGGER.log(Level.FINE, "row to delete : {0}", row);
+                LOGGER.log(Level.FINE, "real row at the position in the file : {0}", realRow.getData());
+                if (((UniqueIdentifiable) realRow.getData()).getUUID().compareTo(((UniqueIdentifiable) row.getData()).getUUID()) == 0) {
+                    int rowPointer = (int) row.getRowPointer();
+                    updateRowsPointer(rowPointer, rowSize);
+                    LOGGER.log(Level.FINE, "[OK] row removed : {0}", row);
+                    try {
+                        return rowWriter.deleteFromFile(rowPointer, rowSize);
+                    } catch (DAOFileWriterException ex) {
+                        throw new DAOFileException(ex.getMessage(), ex);
+                    }
                 }
+            } else { // le tuple n'a pas encore été écrit dans le fichier
+                return true;
             }
             LOGGER.log(Level.FINE, "[NOK] row not removed : {0}", row);
         }
@@ -308,7 +319,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     }
 
     /**
-     * Rétourne un tuple <code>T</code> s'il existe dans la liste des tuples
+     * Renvoie un tuple <code>T</code> s'il existe dans la liste des tuples
      * {@code rowsSortedByUUID} ordonnée suivant l'identifiant {@code UUID} de
      * l'objet encapsulé sinon <code>null</code>. La recherche du tuple est
      * basée sur l'algorithme de recherche dichotomique.
@@ -322,7 +333,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
      */
     public T getRow(UUID dataID) throws DAOFileException {
         int position = RowUtilities.getRowPositionFromSortedListByUUID((List<AbstractRow>) rowsSortedByUUID, dataID);
-        if (rowsSortedByUUID.size() > 0) {
+        if (!rowsSortedByUUID.isEmpty()) {
             T row = rowsSortedByUUID.get(position);
             UniqueIdentifiable data = (UniqueIdentifiable) row.getData();
             if (data.getUUID().compareTo(dataID) == 0) {
@@ -335,11 +346,11 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     }
 
     /**
-     * Rétourne le nombre total de tuples dans un fichier.
+     * Renvoie le nombre total de tuples dans un fichier.
      *
      * @return Nombre total de tuples dans un fichier.
      */
-    int getRowNumber() {
+    public int getRowNumber() {
         return this.fhr.getData().getRowNumber();
     }
 
@@ -371,7 +382,7 @@ public abstract class AbstractRowManager<T extends AbstractRow> {
     }
 
     /**
-     * Rétourne la liste des tuples <code>T</code> triée suivant l'identifiant
+     * Renvoie la liste des tuples <code>T</code> triée suivant l'identifiant
      * de l'objet <code>T</code> encapsulé.
      *
      * @return Liste des tuples <code>T</code> triée suivant l'identifiant de

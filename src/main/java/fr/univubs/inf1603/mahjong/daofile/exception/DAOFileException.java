@@ -5,7 +5,7 @@ package fr.univubs.inf1603.mahjong.daofile.exception;
  * Cette classe regroupe les exceptions du module DAO fichier
  * 
  * @author aliyou
- * @version 1.1.0
+ * @version 1.3
  */
 public class DAOFileException extends Exception {
     

@@ -2,8 +2,10 @@
 package fr.univubs.inf1603.mahjong.daofile.exception;
 
 /**
- *
+ * Cette classe regroupe les ecxeptions du writer {@code DAOFileWriter}.
+ * 
  * @author aliyou
+ * @version 1.3
  */
 public class DAOFileWriterException extends Exception {
     

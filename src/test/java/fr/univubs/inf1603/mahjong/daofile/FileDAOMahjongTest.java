@@ -1,48 +1,64 @@
 
 package fr.univubs.inf1603.mahjong.daofile;
 
-import fr.univubs.inf1603.mahjong.dao.DAO;
 import fr.univubs.inf1603.mahjong.dao.DAOException;
+import fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.DataRow;
+import fr.univubs.inf1603.mahjong.daofile.filemanagement.FileHeaderRow;
 import fr.univubs.inf1603.mahjong.engine.persistence.Persistable;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import static org.junit.Assert.*;
+import org.junit.BeforeClass;
 
 /**
  *
  * @author aliyou
- * @param <T>
+ * @version 1.3
+ * @param <T> Objet à persister
  */
 public abstract class FileDAOMahjongTest<T extends Persistable> {
-
-    /**
-     * Si {@code true} les données sont écrites dans les fichiers de données
-     */
-    protected static final boolean TEST_WITH_FILE_WRITING = true;
     
+    /**
+     * Chemin d'accès du repertoire racine.
+     */
     protected static Path rootDir;
 
     protected FileDAOMahjongTest() {
-        System.out.println("\n *** TEST_WITH_FILE_WRITING = "+TEST_WITH_FILE_WRITING+" *** \n");
         rootDir = Paths.get("/tmp", "mahjong", "dao");
-        System.out.println("rootDir : " + rootDir);
+        if (!rootDir.toFile().exists()) {
+            rootDir.toFile().mkdirs();
+        }
+        System.out.println(" \n **** rootDir : " + rootDir +" *****\n");
     }
+
+//    /**
+//     * Préparation de l'envireonnement de test.
+//     */
+//    @BeforeClass
+//    public static void setUpClass() {
+//        rootDir = Paths.get("/tmp", "mahjong", "dao");
+//        System.out.println(" \n **** rootDir : " + rootDir +" *****\n");
+//    }
 
     /**
      * Destruction de l'environnement de test
      */
-    @AfterClass
-    public static void tearClass() {
+    @After
+    public void tearDown() {
         System.out.println("\n *** deleting test files *** \n ");
         clean(rootDir.getParent());
     }
 
     /**
-     * Supprime récurssivement les fichiers de la base de données.
+     * Supprime récurssivement les fichiers d'un repertoire.
      *
      * @param path Chemin du parent.
      */
@@ -57,7 +73,9 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
         System.out.println(pathFile.getAbsolutePath());
     }
 
-    abstract protected boolean compare(T obj1, T obj2);
+    abstract protected void assertTest(T obj1, T obj2);
+
+    abstract protected Comparator<T> getComparator();
     
     /**
      * Test of writeToPersistence method, of class FileDAOMahjong.
@@ -68,10 +86,13 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
         System.out.println("writeToPersistence");
         try {
             dao.writeToPersistence(expResult);
-            Thread.sleep(3000);
+            // Attendre que l'écriture soit effective
+            synchronized (dao) {
+                dao.wait(15000);
+            }
             T result = dao.loadFromPersistence(expResult.getUUID());
-            compare(expResult, result);
-        } catch (DAOException | InterruptedException  ex) {
+            assertTest(expResult, result);
+        } catch (DAOException | InterruptedException ex) {
             ex.printStackTrace(System.out);
         }
     }
@@ -85,14 +106,17 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
         System.out.println("loadFromPersistence");
         try {
             dao.writeToPersistence(expResult);
-            Thread.sleep(4000);
+            // Attendre que l'écriture soit effective
+            synchronized (dao) {
+                dao.wait(10000);
+            }
             T result = dao.loadFromPersistence(expResult.getUUID());
-            compare(expResult, result);
+            assertTest(expResult, result);
         } catch (DAOException | InterruptedException  ex) {
             ex.printStackTrace(System.out);
         } 
     }
-
+    
     /**
      * Test of laodAll method, of class FileDAOMahjong.
      * @param dao
@@ -104,99 +128,116 @@ public abstract class FileDAOMahjongTest<T extends Persistable> {
             for(T object : expResult) {
                 dao.writeToPersistence(object);
             }
-            for(T object : dao.laodAll()) {
-                boolean res = expResult.contains(object);
-                assertTrue(res);
+            // Attendre que l'écriture soit effective
+            synchronized (dao) {
+                dao.wait(10000);
             }
-        } catch (DAOException  ex) {
-            ex.printStackTrace(System.out);
-        }
-    }
-    
-    /**
-     * Test of writeToPersistance method, of class FileZoneDAO.
-     *
-     * @param dao
-     * @param object
-     */
-    protected void testSave(FileDAOMahjong<T> dao, T object) {
-        try {
-            dao.save(object);
-            assertEquals(object, dao.find(object.getUUID()));
-        } catch (DAOException  ex) {
+            List<T> result = dao.laodAll();
+            
+            assertEquals(expResult.size(), result.size());
+            expResult.sort(getComparator());
+            result.sort(getComparator());
+            System.err.println("\nexpect : " + expResult);
+            System.err.println("result : " + result + "\n");
+            for(int i=0; i<expResult.size(); i++) {
+                assertTest(expResult.get(i), result.get(i));
+            }
+            
+            //Supprimer tous les objets de la liste.
+            dao.delete(expResult);
+        } catch (DAOException | DAOFileException | InterruptedException ex) {
             ex.printStackTrace(System.out);
         }
     }
 
     /**
-     * Test of writeToPersistance method, of class FileZoneDAO.
-     *
+     * Test of delete method, of class FileDAOMahjong.
      * @param dao
-     * @param objectID
+     * @param list
      */
-    protected void testDelete(/*FileDAOMahjong*/DAO<T> dao, UUID objectID) {
+    protected void testDelete(FileDAOMahjong<T> dao, List<T> list) {
+        System.out.println("delete");
         try {
-            dao.delete(objectID);
-            assertNull(dao.find(objectID));
-        } catch (DAOException ex) {
+            for (T obj : list) {
+                dao.writeToPersistence(obj);
+            }
+            // Attendre que l'écriture soit effective
+            synchronized (dao) {
+                dao.wait(10000);
+            }
+            // on supprime les éléments de la liste
+            dao.delete(list);
+            // on vérifie 
+            for (T obj : list) {
+                Assert.assertNull(dao.loadFromPersistence(obj.getUUID()));
+            }
+        } catch (DAOException | DAOFileException | InterruptedException ex) {
             ex.printStackTrace(System.out);
         }
     }
 
-//    /**
-//     * Test of getDataRow method, of class FileDAOMahjong.
-//     */
-//    public void testGetDataRow_3args() throws Exception {
-//        System.out.println("getDataRow");
-//        int rowID = 0;
-//        Object data = null;
-//        long pointer = 0L;
-//        FileDAOMahjong instance = null;
-//        DataRow expResult = null;
-//        DataRow result = instance.getDataRow(rowID, data, pointer);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of getDataRow method, of class FileDAOMahjong.
-//     */
-//    public void testGetDataRow_long() throws Exception {
-//        System.out.println("getDataRow");
-//        long rowPointer = 0L;
-//        FileDAOMahjong instance = null;
-//        DataRow expResult = null;
-//        DataRow result = instance.getDataRow(rowPointer);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
+    /**
+     * Test of removeDataRow method, of class FileDAOMahjong.
+     * @param dao
+     * @param data
+     */
+    protected void testRemoveDataRow(FileDAOMahjong<T> dao, T data) {
+        try {
+            System.out.println("removeDataRow");
+            dao.writeToPersistence(data);
+            // Attendre que l'écriture soit effective
+            synchronized (dao) {
+                dao.wait(10000);
+            }
+            // on vérifie
+            assertEquals(true, dao.removeDataRow(data.getUUID()));
+            assertEquals(false, dao.removeDataRow(UUID.randomUUID()));
+        } catch (DAOException | DAOFileException | InterruptedException ex) {
+            ex.printStackTrace(System.out);
+        }
+    }
 
-//    /**
-//     * Test of removeDataRow method, of class FileDAOMahjong.
-//     */
-//    public void testRemoveDataRow() throws Exception {
-//        System.out.println("removeDataRow");
-//        UUID dataID = null;
-//        FileDAOMahjong instance = null;
-//        boolean expResult = false;
-//        boolean result = instance.removeDataRow(dataID);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of delete method, of class FileDAOMahjong.
-//     */
-//    public void testDelete() throws Exception {
-//        System.out.println("delete");
-//        FileDAOMahjong instance = null;
-//        instance.delete(null);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
+    /**
+     * Test of getDataRow method, of class FileDAOMahjong.
+     * @param instance
+     * @param expResult
+     */
+    protected void testGetDataRow_3args(FileDAOMahjong<T> instance, DataRow<T> expResult) {
+        System.out.println("getDataRow");
+        DataRow<T> result = instance.getDataRow(expResult.geRowID(), expResult.getData(), expResult.getRowPointer());
+        
+        Assert.assertEquals(expResult.geRowID(), result.geRowID());
+        Assert.assertEquals(expResult.getRowPointer(), result.getRowPointer());
+        assertTest(expResult.getData(), result.getData());
+    }
+
+    /**
+     * Test of getDataRow method, of class FileDAOMahjong.
+     * @param dao
+     * @param data
+     */
+    protected void testGetDataRow_long(FileDAOMahjong<T> dao, T data) {
+        try {
+            System.out.println("getDataRow");
+            dao.writeToPersistence(data);
+            // Attendre que l'écriture soit effective
+            synchronized (dao) {
+                dao.wait(10000);
+            }
+            
+            int rowID = 1;
+            long rowPointer = FileHeaderRow.FILE_HEADER_ROW_SIZE; //  = 12
+            
+            DataRow<T> expResult = dao.getDataRow(rowID, data, rowPointer);
+            DataRow<T> result = dao.getDataRow(rowPointer);
+            
+            Assert.assertEquals(expResult.geRowID(), result.geRowID());
+            Assert.assertEquals(expResult.getRowPointer(), result.getRowPointer());
+            assertTest(expResult.getData(), result.getData());
+        } catch (DAOException | DAOFileException | InterruptedException ex) {
+            ex.printStackTrace(System.out);
+        }
+    }
 
     /**
      * Test of getRowNumber method, of class FileDAOMahjong.

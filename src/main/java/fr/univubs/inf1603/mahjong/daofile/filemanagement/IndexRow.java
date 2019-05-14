@@ -9,8 +9,8 @@ import java.util.logging.Logger;
 /**
  * Cette classe répresente un tuple qui encapsule un index.
  *
- * @author aliyou, nesrine
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  */
 public class IndexRow extends AbstractRow<Index> {
 
@@ -37,7 +37,7 @@ public class IndexRow extends AbstractRow<Index> {
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
      * s'il y'a une erreur lors de l'instanciation.
      */
-    public IndexRow(int rowID, Index data, long rowPointer) throws DAOFileException {
+    IndexRow(int rowID, Index data, long rowPointer) throws DAOFileException {
         super(rowID, data, INDEX_SIZE, rowPointer);
     }
 
@@ -52,7 +52,7 @@ public class IndexRow extends AbstractRow<Index> {
      * @throws DAOFileException s'il y'a une erruer lors de la lecture d'un
      * index.
      */
-    public IndexRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
+    IndexRow(DAOFileWriter writer, long rowPointer) throws DAOFileException {
         super(writer, INDEX_SIZE, rowPointer);
     }
 

@@ -143,6 +143,7 @@ public class DAOFileWriterTest {
     /**
      * Test of deleteFromFile method, of class DAOFileWriter.
      * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileException
+     * @throws fr.univubs.inf1603.mahjong.daofile.exception.DAOFileWriterException
      */
     @Test
     public void testDeleteFromFile() throws DAOFileException, DAOFileWriterException {

@@ -16,6 +16,7 @@ import fr.univubs.inf1603.mahjong.engine.rule.FlowerTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SeasonTile;
 import fr.univubs.inf1603.mahjong.engine.rule.SimpleHonor;
 import fr.univubs.inf1603.mahjong.engine.rule.SuperiorHonor;
+import java.beans.PropertyChangeEvent;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -26,21 +27,26 @@ import java.util.logging.Logger;
  * La classe {@code FileTileDAO} gère la persistance des tuiles {@code GameTile}
  * {@link FileTileDAO.TileRow}.
  *
- * @author aliyou, nesrine
- * @version 1.3.0
+ * @author aliyou
+ * @version 1.3
  */
 public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
     
     /**
-     *  Contient l'Instance du DAO qui gère les tuiles.
+     * Nom de 
      */
-    private static FileTileDAO instance;
+    public static final String TILE_WRITED_PROPERTY = "jobDone";
     
     /**
      * Logging
      */
     private final static Logger LOGGER = Logger.getLogger(FileDAOMahjong.class.getName());
 
+    /**
+     *  Contient l'Instance du DAO qui gère les tuiles.
+     */
+    private static FileTileDAO instance;
+    
     /**
      * Gestionnaire de liens entre les tuiles et les zones.
      */
@@ -55,8 +61,8 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
      * @throws DAOFileException s'il ya une erreur lors de l'instanciation.
      */
     private FileTileDAO(Path rootDirPath) throws DAOFileException {
-        super(rootDirPath, "tile.data", "tile.index", TileRow.TILE_ROW_SIZE);
-        tileToZoneLinkManager = new TileToZoneLinkManager(this);
+        super(rootDirPath, "tile", TileRow.TILE_ROW_SIZE);
+        this.tileToZoneLinkManager = new TileToZoneLinkManager(this);
     }
     
     /**
@@ -74,16 +80,14 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
         return instance;
     }
     
-    private FileTileDAO(Path rootDirPath, DAOFileWriter writer) throws DAOFileException {
-        super(rootDirPath, "tile.index", TileRow.TILE_ROW_SIZE, writer);
-        tileToZoneLinkManager = new TileToZoneLinkManager(this);
-    }
-    
-    static FileTileDAO getInstance(Path rootDir, DAOFileWriter writer) throws DAOFileException {
-        if(instance == null) {
-            instance = new FileTileDAO(rootDir, writer);
+    @Override
+    synchronized public void propertyChange(PropertyChangeEvent evt) {
+        if(evt.getPropertyName().equals(DAOFileWriter.DONE_PROPERTY)) {
+            System.out.println("\n* FileTileDAO  -> job done notification received from the writer");
+//            LOGGER.log(Level.INFO, " * writer -> job done");
+            notify();
+            super.getPropertyChangeSupport().firePropertyChange(TILE_WRITED_PROPERTY, false, true);
         }
-        return instance;
     }
     
     /**
@@ -97,7 +101,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
      * {@inheritDoc}
      */
     @Override
-    protected DataRow getDataRow(int rowID, GameTileInterface tile, long rowPointer) throws DAOFileException {
+    protected DataRow getDataRow(int rowID, GameTileInterface tile, long rowPointer) {
         return new TileRow(rowID, tile, rowPointer);
     }
 
@@ -105,8 +109,8 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
      * {@inheritDoc}
      */
     @Override
-    protected DataRow getDataRow(long rpwPointer) throws DAOFileException {
-        return new TileRow(dataWriter, rpwPointer);
+    protected DataRow getDataRow(long rowPointer) throws DAOFileException {
+        return new TileRow(dataWriter, rowPointer);
     }
 
     /**
@@ -126,7 +130,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
                             new Object[]{gameTile.getClass().getSimpleName(), gameTile.getUUID()});
                 }
             } else {
-                LOGGER.log(Level.INFO, "GameTile id={0} can't be deleted cause it is linked to a zone", gameTile.getUUID());
+                LOGGER.log(Level.INFO, "GameTile id={0} can't be deleted \n\t cause -> it is linked to a zone", gameTile.getUUID());
             }
         } catch (DAOFileException ex) {
             throw new DAOException(ex.getMessage(), ex);
@@ -163,7 +167,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
      * </pre>
      *
      */
-    class TileRow extends DataRow<GameTileInterface> {
+    static class TileRow extends DataRow<GameTileInterface> {
         
         /**
          * Taille d'une tuile en octet.
@@ -183,7 +187,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
          * @param data Tuile à encapsuler dans un tuple.
          * @param rowPointer Pointeur d'un tuple.
          */
-        TileRow(int rowID, GameTileInterface data, long rowPointer) throws DAOFileException {
+        TileRow(int rowID, GameTileInterface data, long rowPointer) {
             super(rowID, data, TILE_SIZE, rowPointer);
         }
 
@@ -257,12 +261,12 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
          */
         @Override
         protected int writeData(ByteBuffer buffer) throws DAOFileException {
+            int stratPosition = buffer.position();
             if (buffer.remaining() < TILE_SIZE) {
                 String message = "Remianing bytes '" + buffer.remaining() + "' is less than TILE_SIZE '"
                         + TILE_SIZE + "'";
                 throw new DAOFileException(message);
             }
-            int stratPosition = buffer.position();
             GameTile tile = (GameTile) getData();
             UUID tileID = tile.getUUID();
             AbstractTile abstractTile = getData().getTile();
@@ -289,7 +293,6 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
                         CommonTile commonTile = (CommonTile) abstractTile;
                         buffer.put((byte) commonTile.getFamily().getSymbol());             // 1 Byte
                         int value = commonTile.getNumber().getValue();
-//                    System.out.println("value   : " +value);
                         buffer.putInt(value);                  // 4 Bytes
                         break;
                     case SUPERIORHONOR:
@@ -311,7 +314,6 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
                         buffer.put((byte) symbol1);   // 1 Byte
                         break;
                 }
-                indexManager.addIndex(getIndex());
                 return buffer.position() - stratPosition;
             } catch (DAOFileWriterException ex) {
                 throw new DAOFileException(ex.getMessage(), ex);
@@ -320,7 +322,7 @@ public class FileTileDAO extends FileDAOMahjong<GameTileInterface> {
     }
 
     /**
-     *
+     * Enumération correspondant aux types de tuiles.
      */
     private static enum TileClassSimpleName {
         COMMONTILE("cot"),

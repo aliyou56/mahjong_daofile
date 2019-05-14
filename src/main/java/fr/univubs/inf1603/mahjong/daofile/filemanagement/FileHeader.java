@@ -13,7 +13,7 @@ import java.util.logging.Logger;
  * fichier.
  * 
  * @author aliyou
- * @version 1.2.5
+ * @version 1.3
  */
 public class FileHeader implements MahjongObservable {
 
@@ -100,7 +100,7 @@ public class FileHeader implements MahjongObservable {
     }
     
     /**
-     * Rétourne le prochain identifiant de tuple.
+     * Renvoie le prochain identifiant de tuple.
      * Incremente la valeur de l'identifiant du dernier tuple d'un fichier {@code lastRowID}.
      *
      * @return Prochain identifiant de tuple.
@@ -111,7 +111,7 @@ public class FileHeader implements MahjongObservable {
     }
 
     /**
-     * Incrémente le valeur du nombre total de tuple dans le fichier
+     * Incrémente la valeur du nombre total de tuple dans le fichier
      */
     synchronized public void incrementRowNumber() {
         try {
@@ -122,7 +122,7 @@ public class FileHeader implements MahjongObservable {
     }
 
     /**
-     * Décrémente le valeur du nombre total de tuple dans le fichier
+     * Décrémente la valeur du nombre total de tuple dans le fichier
      */
     synchronized public void decrementRowNumber() {
         if(getRowNumber() > 0) {
@@ -143,7 +143,7 @@ public class FileHeader implements MahjongObservable {
     }
 
     /**
-     * Rétourne une description textuelle d'un lien
+     * Renvoie une description textuelle d'un lien
      *
      * @return Description textuelle d'un lien.
      */
@@ -175,9 +175,6 @@ public class FileHeader implements MahjongObservable {
         if (this.rowNumber != other.rowNumber) {
             return false;
         }
-        if (this.lastRowID != other.lastRowID) {
-            return false;
-        }
-        return true;
+        return this.lastRowID == other.lastRowID;
     }
 }

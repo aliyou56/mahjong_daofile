@@ -11,10 +11,12 @@ import fr.univubs.inf1603.mahjong.daofile.filemanagement.FileHeaderRow;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongGame;
 import fr.univubs.inf1603.mahjong.sapi.Difficulty;
 import fr.univubs.inf1603.mahjong.sapi.impl.SapiGame;
+import java.beans.PropertyChangeEvent;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -25,33 +27,33 @@ import java.util.logging.Logger;
  * La classe {@code FileSapiGameDAO} gère la persistance des objets
  * {@code SapiGame} {@link FileSapiGameDAO.SapiGameRow}.
  *
- * @author aliyou, nesrine
- * @version 1.3.0
+ * @author aliyou
+ * @version 1.3
  */
 public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGameDAO, Serializable {
-    
+
     private static final long serialVersionID = 1L;
 
-    /**
-     *  Contient l'Instance du DAO qui gère les objets {@code SapiGame}.
-     */
-    private static FileSapiGameDAO instance;
-    
     /**
      * Logging
      */
     private final static Logger LOGGER = Logger.getLogger(FileSapiGameDAO.class.getName());
 
     /**
+     * Contient l'Instance du DAO qui gère les objets {@code SapiGame}.
+     */
+    private static FileSapiGameDAO instance;
+
+    /**
      * DAO qui gère les parties de Mahjong {@code Game}.
      */
-    private final FileGameDAO gameDAO;
+    /*final*/ private static FileGameDAO gameDAO;
 
     /**
      * Tableau associatif gardant le lien entre les noms de parties et les
      * identifiants.
      */
-    private HashMap<String, UUID> mapGameNameUUID;
+    final private HashMap<String, UUID> mapGameNameUUID;
 
     /**
      * Constructeur privé avec un Chemin d'accès du répertoire racine
@@ -63,35 +65,44 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      * @throws DAOFileException s'il ya une erreur lors de l'instanciation.
      */
     private FileSapiGameDAO(Path rootDirPath) throws DAOFileException {
-        super(rootDirPath, "sapiGame.data", "sapiGame.index", SapiGameRow.SAPI_GAME_ROW_SIZE);
-        gameDAO = FileGameDAO.getInstance(rootDirPath);
+        super(rootDirPath, "sapiGame", SapiGameRow.SAPI_GAME_ROW_SIZE);
+        FileSapiGameDAO.gameDAO = FileGameDAO.getInstance(super.rootDirPath);
+        FileSapiGameDAO.gameDAO.addPropertyChangeListener(this);
         this.mapGameNameUUID = new HashMap<>();
     }
     
     /**
      * Renvoie l'instance du DAO qui gère les objets {@code SapiGame}.
-     * 
+     *
      * @param rootDir Chemin d'accès du répertoire racine. NE DOIT PAS ETRE
      * NULL.
      * @return L'instance du DAO qui gère les objets {@code SapiGame}.
      * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
      */
     static FileSapiGameDAO getInstance(Path rootDir) throws DAOFileException {
-        if(instance == null) {
+        if (instance == null) {
             instance = new FileSapiGameDAO(rootDir);
         }
         return instance;
     }
 
+    @Override
+    synchronized public void propertyChange(PropertyChangeEvent evt) {
+        if(evt.getPropertyName().equals(FileGameDAO.GAME_WRITED_PROPERTY)) {
+            System.out.println("* FileSapiGame -> job done notification received from FileGameDAO\n");
+            notify();
+        }
+    }
+
     /**
-     * Charge les noms de tous les parties de Mahjong persistés. Les noms sont
+     * Charge tous les noms des parties de Mahjong persistés. Les noms sont
      * gardés dans un tableau associatif avec les identifiants comme valeur.
      */
     private void fillMap() {
         long rowPointer = FileHeaderRow.FILE_HEADER_ROW_SIZE + AbstractRow.ROW_HEADER_SIZE;
         int lenght = 16 + 54;
-        LOGGER.log(Level.INFO, "rowNumber : {0} | mapNameUUID size : {1} | lenght : {2} ",
-                new Object[]{getRowNumber(), mapGameNameUUID.size(), lenght});
+        LOGGER.log(Level.INFO, " rowNumber : {0} - mapNameUUID size : {1} - lenght : {2} fileSize : {3} \n",
+                new Object[]{getRowNumber(), mapGameNameUUID.size(), lenght, dataWriter.getFileLenght()});
         if (getRowNumber() > mapGameNameUUID.size()) {
             for (int i = 0; i < getRowNumber(); i++) {
                 try {
@@ -112,12 +123,12 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
 
         }
     }
-    
+
     /**
      * {@inheritDoc}
      */
     @Override
-    protected DataRow<SapiGame> getDataRow(int rowID, SapiGame data, long pointer) throws DAOFileException {
+    protected DataRow<SapiGame> getDataRow(int rowID, SapiGame data, long pointer) {
         String gameName = data.getName();
         if (!mapGameNameUUID.containsKey(gameName)) {
             mapGameNameUUID.put(gameName, data.getUUID());
@@ -143,6 +154,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
         mapGameNameUUID.keySet().forEach((name) -> {
             names.add(name);
         });
+        Collections.sort(names);
         return names;
     }
 
@@ -152,7 +164,9 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
     @Override
     public List<UUID> loadPersistedUUIDs() throws DAOException {
         fillMap();
-        return new ArrayList<>(mapGameNameUUID.values());
+        List<UUID> result = new ArrayList<>(mapGameNameUUID.values());
+        Collections.sort(result);
+        return result;
     }
 
     /**
@@ -194,6 +208,24 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
     }
 
     /**
+     * Supprime une liste d'objets {@code SapiGame} du fichier de
+     * données.
+     *
+     * @param sapiGames Liste d'objets {@code SapiGame}
+     * @throws DAOFileException s'il y'a une erreur lors de la suppression.
+     */
+    @Override
+    public void delete(List<SapiGame> sapiGames) throws DAOFileException { //TODO check
+        try {
+            for (SapiGame game : sapiGames) {
+                deleteFromPersistence(game);
+            }
+        } catch (DAOException ex) {
+            throw new DAOFileException(ex.getMessage(), ex);
+        }
+    }
+
+    /**
      * La classe <code>SapiGameRow</code> répresente un tuple d'un objet
      * {@code SapiGame}. {@link SapiGame}.
      * <br>
@@ -210,7 +242,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
      *   ex :       -    |     -      |      -     |          -        |   MEDIUM   |
      * </pre>
      */
-    class SapiGameRow extends DataRow<SapiGame> {
+    static class SapiGameRow extends DataRow<SapiGame> {
 
         /**
          * Taille maximale d'un nom en octet.
@@ -234,7 +266,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
          * @param data Objet {@code SapiGame} à encapsuler dans un tuple.
          * @param rowPointer Pointeur d'un tuple.
          */
-        SapiGameRow(int rowID, SapiGame data, long rowPointer) throws DAOFileException {
+        SapiGameRow(int rowID, SapiGame data, long rowPointer) {
             super(rowID, data, SAPI_GAME_SIZE, rowPointer);
         }
 
@@ -297,7 +329,7 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
             int startPosition = buffer.position();
             try {
                 UUID sapiGameID = getData().getUUID();
-                String gameName = FileDAOUtilities.checkStringLenght(getData().getName(), NAME_SIZE);
+                String gameName = FileDAOUtilities.checkNameLenght(getData().getName(), NAME_SIZE);
                 Difficulty surrenderDifficulty = getData().getSurrenderDifficulty();
 
                 DAOFileWriter.writeUUID(buffer, sapiGameID);
@@ -306,7 +338,6 @@ public class FileSapiGameDAO extends FileDAOMahjong<SapiGame> implements SapiGam
 
                 if (gameDAO.find(getData().getUUID()) == null) {
                     gameDAO.save(getData().getGame());
-                    indexManager.addIndex(getIndex());
                 }
 
                 return buffer.position() - startPosition;

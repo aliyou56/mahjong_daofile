@@ -13,7 +13,6 @@ import fr.univubs.inf1603.mahjong.engine.game.GameException;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongBoard;
 import fr.univubs.inf1603.mahjong.engine.game.MahjongGame;
 import fr.univubs.inf1603.mahjong.engine.game.Move;
-import fr.univubs.inf1603.mahjong.engine.game.MoveException;
 import fr.univubs.inf1603.mahjong.engine.game.TileZone;
 import fr.univubs.inf1603.mahjong.engine.game.TileZoneIdentifier;
 import fr.univubs.inf1603.mahjong.engine.rule.GameRule;
@@ -36,15 +35,12 @@ import java.util.logging.Logger;
  * La classe {@code FileGameDAO} gère la persistance des parties de Mahjong
  * {@code Game} {@link FileGameDAO.GameRow}.
  *
- * @author aliyou, nesrine
- * @version 1.2.5
+ * @author aliyou
+ * @version 1.3
  */
 public class FileGameDAO extends FileDAOMahjong<Game> {
 
-    /**
-     *  Contient l'Instance du DAO qui gère les parties de Mahjong.
-     */
-    private static FileGameDAO instance;
+    public static final String GAME_WRITED_PROPERTY = "jobDone";
     
     /**
      * Logging
@@ -52,9 +48,18 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
     private static final Logger LOGGER = Logger.getLogger(FileGameDAO.class.getName());
 
     /**
+     *  Contient l'Instance du DAO qui gère les parties de Mahjong.
+     */
+    private static FileGameDAO instance;
+    
+    /**
+     * DAO qui gère les zones.
+     */
+    /*final*/ private static FileZoneDAO zoneDAO;
+    /**
      * Gestionnaire de liens entre les zones et les parties de Mahjong.
      */
-    private final LinkManager<TileZone> zoneToGameLinkManager;
+    private static LinkManager<TileZone> zoneToGameLinkManager;
 
     /**
      * Constructeur privé avec un Chemin d'accès du répertoire racine
@@ -65,8 +70,10 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
      * @throws DAOFileException s'il ya une erreur lors de l'instanciation.
      */
     private FileGameDAO(Path rootDirPath) throws DAOFileException {
-        super(rootDirPath, "game.data", "game.index", GameRow.GAME_ROW_SIZE);
-        zoneToGameLinkManager = FileZoneDAO.getInstance(rootDirPath).getLinkManager();
+        super(rootDirPath, "game", GameRow.GAME_ROW_SIZE);
+        FileGameDAO.zoneDAO = FileZoneDAO.getInstance(rootDirPath);
+        FileGameDAO.zoneDAO.addPropertyChangeListener(this);
+        FileGameDAO.zoneToGameLinkManager = FileGameDAO.zoneDAO.getLinkManager();
     }
     
     /**
@@ -83,7 +90,16 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
         }
         return instance;
     }
-
+    
+    @Override
+    synchronized public void propertyChange(PropertyChangeEvent evt) {
+        if(evt.getPropertyName().equals(FileZoneDAO.ZONE_WRITED_PROPERTY)) {
+            System.out.println("* FileGameDAO  -> job done notification received from FileZoneDAO");
+            notify();
+            super.getPropertyChangeSupport().firePropertyChange(GAME_WRITED_PROPERTY, false, true);
+        }
+    }
+    
     /**
      * Renvoie un tuple de partie de Mahjong {@code FileGameRow} d'identifiant
      * {@code rowID} et de pointeur de tuple {@code rowPointer}.
@@ -92,11 +108,9 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
      * @param data Partie de Mahjong {@code Game} à encapsuler dans le tuple.
      * @param rowPointer Pointeur de tuple.
      * @return Nouveau tuple de partie de Mahjong {@code FileGameRow}.
-     * @throws DAOFileException s'il y'a une erreur lors de la création du
-     * tuple.
      */
     @Override
-    protected DataRow<Game> getDataRow(int rowID, Game data, long rowPointer) throws DAOFileException {
+    protected DataRow<Game> getDataRow(int rowID, Game data, long rowPointer) {
         return new GameRow(rowID, data, rowPointer);
     }
 
@@ -120,9 +134,7 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
     protected void deleteFromPersistence(Game game) throws DAOException {
         try {
             MahjongBoard board = (MahjongBoard) ((MahjongGame) game).getBoard();
-            if (board != null) {
-                zoneToGameLinkManager.removeChildren(getTileZones(board.getZones()));
-            }
+            zoneToGameLinkManager.removeChildren(getTileZones(board.getZones()));
             if (super.removeDataRow(game.getUUID())) {
                 LOGGER.log(Level.INFO, " {0} id={1} deleted from persistance",
                         new Object[]{game.getClass().getSimpleName(), game.getUUID()});
@@ -150,7 +162,12 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
         }
     }
 
-    private List<TileZone> getTileZones(EnumMap<TileZoneIdentifier, TileZone> mapsZone) {
+    /**
+     * Renvoi la liste de zones contenue dans une énumeration.
+     * @param mapsZone Enumération
+     * @return Liste de zones.
+     */
+    private static List<TileZone> getTileZones(EnumMap<TileZoneIdentifier, TileZone> mapsZone) {
         List<TileZone> zones = new ArrayList<>();
         if (mapsZone != null) {
             mapsZone.entrySet().forEach((entry) -> {
@@ -188,7 +205,7 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
      * </pre>
      *
      */
-    class GameRow extends DataRow<Game> {
+    static class GameRow extends DataRow<Game> {
 
         /**
          * Taille d'un Board en octet. boardID | currentWind
@@ -219,11 +236,11 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
          * dans un fichier. DOIT ETRE POSITIF.
          * @throws DAOFileException s'il y'a une erreur lors de l'instanciation.
          */
-        GameRow(int rowID, Game data, long rowPointer) throws DAOFileException {
+        GameRow(int rowID, Game data, long rowPointer) {
             super(rowID, data, GAME_SIZE, rowPointer);
             Board board = ((MahjongGame) this.getData()).getBoard();
-            FileDAOUtilities.checkNotNull("board", board);
-            FileDAOUtilities.checkNotNull("lastPlayedMove", data.getLastPlayedMove());
+            FileDAOUtilities.checkNotNull("GameRow -> board", board);
+            FileDAOUtilities.checkNotNull("GameRow -> lastPlayedMove", data.getLastPlayedMove());
 //            if(board != null) {
 //            board.addPropertyChangeListener(this);
 //            }
@@ -363,7 +380,6 @@ public class FileGameDAO extends FileDAOMahjong<Game> {
                 if (!isWritedInFile()) { // première écriture dans le fichier de données
                     zoneToGameLinkManager.addLink(gameID, zones);
                     setWritedInFile(true);
-                    indexManager.addIndex(getIndex());
                 }
                 return buffer.position() - startPosition;
             } catch (DAOFileWriterException | GameException ex) {
